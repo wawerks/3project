@@ -29,14 +29,6 @@ class FoundItemController extends Controller
      */
     public function store(Request $request)
     {
-        $imageUrl = null;
-        if ($request->hasFile('image_url')) {
-            $image = $request->file('image_url');
-            $filename = time() . '.' . $image->extension();
-            $image->move(public_path('assets/img'), $filename);
-            $imageUrl = 'assets/img/' . $filename;
-        }
-
         $request->validate([
             'found_date' => 'required|date',
             'item_name' => 'required|string|max:255',
@@ -48,15 +40,31 @@ class FoundItemController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
+        $validated = $request->validated();
+
+        // Handle image upload
+        $imageUrl = null;
+        if ($request->hasFile('image_url')) {
+            $file = $request->file('image_url');
+            $filename = 'item_' . time() . '.' . $file->getClientOriginalExtension();
+            
+            // Store directly in the public directory
+            $file->move(public_path('assets/items'), $filename);
+            
+            // Set the URL path relative to public directory
+            $imageUrl = 'assets/items/' . $filename;
+        }
+
+        // Create the found item
         $foundItem = FoundItem::create([
-            'found_date' => $request->input('found_date'),
-            'item_name' => $request->input('item_name'),
-            'facebook_link' => $request->input('facebook_link'),
-            'contact_number' => $request->input('contact_number'),
-            'description' => $request->input('description'),
-            'category' => $request->input('category'),
-            'location' => $request->input('location'),
-            'user_id' => $request->input('user_id'),
+            'found_date' => $validated['found_date'],
+            'item_name' => $validated['item_name'],
+            'facebook_link' => $validated['facebook_link'],
+            'contact_number' => $validated['contact_number'],
+            'description' => $validated['description'],
+            'category' => $validated['category'],
+            'location' => $validated['location'],
+            'user_id' => $validated['user_id'],
             'image_url' => $imageUrl,
         ]);
 

@@ -26,7 +26,12 @@
                 <div class="flex items-center space-x-6">
                     <!-- Item Image -->
                     <div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
-                        <img :src="getImageUrl(item.image_url)" :alt="item.item_name" class="w-full h-full object-cover" />
+                        <img 
+                            :src="item.image_url && item.image_url.startsWith('/') ? item.image_url : '/' + item.image_url" 
+                            :alt="item.item_name" 
+                            class="w-full h-full object-cover"
+                            @error="handleImageError"
+                        />
                     </div>
 
                     <!-- Item Details -->
@@ -122,6 +127,13 @@ const filteredClaims = computed(() => {
   return claims.value.filter(claim => claim.claim_status.toLowerCase() === currentFilter.value);
 });
 
+// Handle image loading error
+const handleImageError = (e) => {
+    console.error('Error loading image:', e.target.src);
+    // Set a fallback image or handle the error as needed
+    e.target.src = '/assets/default-item.png'; // Make sure you have this fallback image
+};
+
 // Helper function to get correct image URL
 const getImageUrl = (url) => {
     if (!url) return '';
@@ -177,6 +189,11 @@ const fetchItems = async () => {
         const items = foundItemsData.map(foundItem => {
             const claim = claimsData.find(c => c.item_id === foundItem.id);
             if (claim) {
+                // Ensure image_url has leading slash
+                const imageUrl = foundItem.image_url && !foundItem.image_url.startsWith('/') 
+                    ? '/' + foundItem.image_url 
+                    : foundItem.image_url;
+
                 return {
                     ...foundItem,
                     claim_id: claim.id,
@@ -184,8 +201,7 @@ const fetchItems = async () => {
                     proof_of_ownership: claim.proof_of_ownership,
                     submission_date: claim.submission_date,
                     user_name: usersMap[claim.user_id] || 'Unknown',
-                    // Ensure image_url is properly formatted
-                    image_url: getImageUrl(foundItem.image_url)
+                    image_url: imageUrl
                 };
             }
             return null;
