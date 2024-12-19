@@ -37,6 +37,7 @@
                                     'bg-yellow-100 text-yellow-800': item.claim_status === 'pending',
                                     'bg-green-100 text-green-800': item.claim_status === 'approved',
                                     'bg-red-100 text-red-800': item.claim_status === 'rejected'
+
                                 }]">
                                 {{ item.claim_status ? item.claim_status.charAt(0).toUpperCase() + item.claim_status.slice(1) : 'Unknown' }}
                             </span>
