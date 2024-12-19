@@ -322,7 +322,7 @@ export default {
           if (response.data.comment) {
             const newComment = {
               ...response.data.comment,
-              userName: response.data.comment.user.name // Use the name from the response
+              userName: response.data.comment.user.name
             };
             item.comments.unshift(newComment);
             

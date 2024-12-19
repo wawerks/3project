@@ -51,23 +51,21 @@ class CommentController extends Controller
     
             DB::beginTransaction();
             try {
-                // Create the comment
-                $comment = new Comment();
-                $comment->user_id = auth()->id();
-                $comment->text = $request->text;
-                $comment->commentable_id = $item->id;
-                $comment->commentable_type = get_class($item);
-                $comment->item_type = $request->item_type;
-                
-                Log::info('Comment object before save:', $comment->toArray());
-                
-                $comment->save();
-                
-                // Load the user relationship for the response
-                $comment->load('user');
+                // Create the comment using create method with fillable fields
+                $comment = Comment::create([
+                    'user_id' => auth()->id(),
+                    'text' => $request->text,
+                    'commentable_id' => $item->id,
+                    'commentable_type' => get_class($item),
+                    'item_type' => $request->item_type,
+                    'item_id' => $request->item_id
+                ]);
                 
                 Log::info('Comment created successfully:', ['comment' => $comment->toArray()]);
 
+                // Load the user relationship for the response
+                $comment->load('user');
+                
                 // Create notification for the item owner
                 if ($item->user_id !== auth()->id()) {
                     try {
@@ -119,7 +117,7 @@ class CommentController extends Controller
                 }
 
                 DB::commit();
-    
+
                 return response()->json([
                     'success' => true,
                     'comment' => [
@@ -133,7 +131,8 @@ class CommentController extends Controller
                         'updated_at' => $comment->updated_at,
                         'commentable_id' => $comment->commentable_id,
                         'commentable_type' => $comment->commentable_type,
-                        'item_type' => $request->item_type
+                        'item_type' => $comment->item_type,
+                        'item_id' => $comment->item_id
                     ]
                 ]);
     
