@@ -52,11 +52,36 @@ class AdminController extends Controller
 
     public function usersLog()
     {
-        $activityLog = ActivityLog::with('user:id,name')->get();
+        try {
+            $activityLog = ActivityLog::with('user:id,name')
+                ->orderBy('action_time', 'desc')
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'user' => $log->user ? [
+                            'id' => $log->user->id,
+                            'name' => $log->user->name
+                        ] : null,
+                        'action' => $log->action,
+                        'action_time' => $log->action_time,
+                        'ip_address' => $log->ip_address,
+                        'user_agent' => $log->user_agent
+                    ];
+                });
 
-        return response()->json([
-            'activityLog' => $activityLog,
-        ]);
+            return response()->json([
+                'success' => true,
+                'activityLog' => $activityLog
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching activity log: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching activity log',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function reportedItems()

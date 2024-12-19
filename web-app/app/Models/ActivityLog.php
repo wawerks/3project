@@ -18,6 +18,12 @@ class ActivityLog extends Model
         'ip_address',
         'user_agent',
     ];
+
+    protected $casts = [
+        'action_time' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
     
     public function user()
     {

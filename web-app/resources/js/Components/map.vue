@@ -2,15 +2,6 @@
   <div class="map-container">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <v-card-title class="text-h6 font-weight-bold mt-5">LostNoMore Map</v-card-title>
-    <v-text-field
-      v-model="searchQuery"
-      label="Search for a location"
-      outlined
-      dense
-      class="input-field"
-      @input="searchLocation"
-      :loading="loadingSearch"
-    ></v-text-field>
     <div class="map-wrapper" :class="{ 'map-disabled': disabled }" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
       <div id="map" ref="mapRef" class="custom-map"></div>
       <div v-if="isLoading" class="loading-overlay">
@@ -48,8 +39,6 @@ export default {
   data() {
     return {
       map: null,
-      searchQuery: "",
-      loadingSearch: false,
       isLoading: true,
       snackbar: {
         visible: false,
@@ -64,9 +53,6 @@ export default {
       endX: null,
       _lastPinchDist: null,
       initialLocationSet: false,
-      searchResults: [],
-      searchMarker: null,
-      // Caraga region boundaries (refined)
       caragaBounds: {
         north: 9.8500, // Surigao del Norte
         south: 7.8500, // Agusan del Sur
@@ -76,7 +62,8 @@ export default {
       selectedLocation: {
         lat: null,
         lng: null
-      }
+      },
+      marker: null
     };
   },
   mounted() {
@@ -257,91 +244,6 @@ export default {
         this.isLoading = false;
       }
     },
-    async searchLocation() {
-      if (!this.searchQuery.trim()) return;
-
-      this.loadingSearch = true;
-      try {
-        // Use Nominatim API for geocoding with Caraga region viewbox
-        const response = await axios.get(
-          `https://nominatim.openstreetmap.org/search`,
-          {
-            params: {
-              q: this.searchQuery + ', Caraga, Philippines',
-              format: 'json',
-              limit: 5,
-              addressdetails: 1,
-              viewbox: `${this.caragaBounds.west},${this.caragaBounds.north},${this.caragaBounds.east},${this.caragaBounds.south}`,
-              bounded: 1
-            },
-            headers: {
-              'Accept-Language': 'en'
-            }
-          }
-        );
-
-        this.searchResults = response.data.filter(result => {
-          const lat = parseFloat(result.lat);
-          const lon = parseFloat(result.lon);
-          
-          // Check if result is within Caraga bounds
-          return lat >= this.caragaBounds.south && 
-                 lat <= this.caragaBounds.north && 
-                 lon >= this.caragaBounds.west && 
-                 lon <= this.caragaBounds.east &&
-                 result.display_name.toLowerCase().includes('caraga');
-        });
-
-        if (this.searchResults.length > 0) {
-          const firstResult = this.searchResults[0];
-          const lat = parseFloat(firstResult.lat);
-          const lon = parseFloat(firstResult.lon);
-
-          // Remove previous search marker if exists
-          if (this.searchMarker) {
-            this.map.removeLayer(this.searchMarker);
-          }
-
-          // Create custom icon for search result
-          const searchIcon = L.divIcon({
-            className: 'search-location-marker',
-            html: '<div class="search-marker-pin"></div><div class="search-marker-pulse"></div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 30]
-          });
-
-          // Add new marker
-          this.searchMarker = L.marker([lat, lon], {
-            icon: searchIcon
-          }).addTo(this.map);
-
-          // Create popup content with location details
-          const popupContent = `
-            <div class="search-popup">
-              <h3>${firstResult.display_name.split(',')[0]}</h3>
-              <p>${firstResult.display_name}</p>
-            </div>
-          `;
-
-          this.searchMarker.bindPopup(popupContent).openPopup();
-
-          // Fly to location with animation
-          this.map.flyTo([lat, lon], 16, {
-            duration: 1.5,
-            easeLinearity: 0.25
-          });
-
-          this.showSnackbar("Location found in Caraga region!", "success");
-        } else {
-          this.showSnackbar("No results found in Caraga region. Please try another location.", "warning");
-        }
-      } catch (error) {
-        console.error('Search error:', error);
-        this.showSnackbar("Error searching for location. Please try again.", "error");
-      } finally {
-        this.loadingSearch = false;
-      }
-    },
     getCurrentLocation() {
       if (!navigator.geolocation) {
         this.showSnackbar("Geolocation is not supported by your browser.", "error");
@@ -457,6 +359,31 @@ export default {
       console.log('Swiped left');
       // Add your logic here to change the map view
     },
+    setLocation(location) {
+      if (this.map && location.lat && location.lng) {
+        // Remove existing marker if it exists
+        if (this.currentMarker) {
+          this.map.removeLayer(this.currentMarker);
+        }
+        
+        // Create a new marker at the location
+        this.currentMarker = L.marker([location.lat, location.lng], {
+          draggable: false
+        }).addTo(this.map);
+        
+        // Add a popup with the coordinates
+        this.currentMarker.bindPopup(`
+          <div class="text-center">
+            <strong>Item Location</strong><br>
+            Latitude: ${location.lat.toFixed(6)}<br>
+            Longitude: ${location.lng.toFixed(6)}
+          </div>
+        `).openPopup();
+        
+        // Center the map on the location
+        this.map.setView([location.lat, location.lng], 15);
+      }
+    },
   },
   beforeDestroy() {
     if (this.watchId !== null) {
@@ -469,8 +396,8 @@ export default {
       if (this.userLocationMarker) {
         this.map.removeLayer(this.userLocationMarker);
       }
-      if (this.searchMarker) {
-        this.map.removeLayer(this.searchMarker);
+      if (this.marker) {
+        this.map.removeLayer(this.marker);
       }
       this.map.remove();
     }
@@ -480,19 +407,18 @@ export default {
 
 <style>
 .map-container {
-  position: relative;
-  width: 100%;
   height: 100%;
-  touch-action: pan-x pan-y;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .map-wrapper {
   position: relative;
+  flex-grow: 1;
   width: 100%;
-  height: 600px;
-  border-radius: 8px;
-  overflow: hidden;
-  touch-action: none;
+  height: 100%;
+  min-height: 400px;
 }
 
 .custom-map {

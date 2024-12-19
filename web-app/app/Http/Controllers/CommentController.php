@@ -58,6 +58,7 @@ class CommentController extends Controller
                 $comment->commentable_id = $item->id;
                 $comment->commentable_type = get_class($item);
                 $comment->item_type = $request->item_type;
+                $comment->item_id = $item->id;
                 
                 Log::info('Comment object before save:', $comment->toArray());
                 
@@ -230,8 +231,8 @@ class CommentController extends Controller
             ]);
 
             // Get comments specifically for this item and type
-            $comments = Comment::where('commentable_id', $item->id)
-                ->where('commentable_type', get_class($item))
+            $comments = Comment::where('item_id', $item->id)
+                ->where('item_type', $item_type)
                 ->with('user:id,name')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -251,8 +252,7 @@ class CommentController extends Controller
                     ],
                     'created_at' => $comment->created_at,
                     'updated_at' => $comment->updated_at,
-                    'commentable_id' => $comment->commentable_id,
-                    'commentable_type' => $comment->commentable_type,
+                    'item_id' => $comment->item_id,
                     'item_type' => $comment->item_type
                 ];
             });

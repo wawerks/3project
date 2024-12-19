@@ -107,15 +107,60 @@ const props = defineProps({
 const imagePreview = ref(null);
 const imageFile = ref(null);
 
-const handleImageUpload = (event) => {
+const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-        imageFile.value = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.value = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        try {
+            // Create an image element
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            
+            await new Promise((resolve) => {
+                img.onload = () => {
+                    // Create a canvas element
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Calculate new dimensions (max 1920px width/height)
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 1920;
+
+                    if (width > height && width > maxSize) {
+                        height = Math.round((height * maxSize) / width);
+                        width = maxSize;
+                    } else if (height > maxSize) {
+                        width = Math.round((width * maxSize) / height);
+                        height = maxSize;
+                    }
+
+                    // Set canvas dimensions
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Draw and compress image
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to Blob with compression
+                    canvas.toBlob((blob) => {
+                        // Create a new file from the blob
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now(),
+                        });
+                        
+                        // Update the image file and preview
+                        imageFile.value = compressedFile;
+                        imagePreview.value = URL.createObjectURL(compressedFile);
+                        
+                        resolve();
+                    }, 'image/jpeg', 0.8); // Compress with 80% quality
+                };
+            });
+        } catch (error) {
+            console.error('Error compressing image:', error);
+            alert('Error processing image. Please try again with a different image.');
+        }
     }
 };
 
@@ -131,18 +176,10 @@ const submitClaim = () => {
         return;
     }
 
-    console.log("Image File:", imageFile.value); // Log the file value
-    console.log("Item:", props.item); // Log the item object
-
     const formData = new FormData();
-    formData.append('proof_of_ownership', imageFile.value); // Attach the file
-    formData.append('item_id', props.item.id); // Attach the item's ID
-    formData.append('claim_status', 'Pending'); // Correct the claim status value
-
-    // Log the FormData content
-    for (const pair of formData.entries()) {
-        console.log(`${pair[0]}:`, pair[1]);
-    }
+    formData.append('proof_of_ownership', imageFile.value, `proof_${Date.now()}.jpg`);
+    formData.append('item_id', props.item.id);
+    formData.append('claim_status', 'Pending');
 
     // Use `router.post` to send the form data
     router.post('/claims', formData, {
@@ -151,18 +188,14 @@ const submitClaim = () => {
             alert("Claim submitted successfully!");
             imagePreview.value = null;
             imageFile.value = null;
-
-            console.log("Form submission succeeded. Image preview and file reset.");
+            window.location.href = '/newsfeed'; // Redirect after success
         },
         onError: (errors) => {
             console.error("Submission failed:", errors);
-            alert("Failed to submit the claim. Please try again.");
+            alert("Failed to submit the claim. " + (errors.proof_of_ownership || "Please try again."));
         },
     });
 };
-
-
-
 
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {

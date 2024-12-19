@@ -26,7 +26,7 @@
                 <div class="flex items-center space-x-6">
                     <!-- Item Image -->
                     <div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
-                        <img :src="item.image_url" :alt="item.item_name" class="w-full h-full object-cover" />
+                        <img :src="getImageUrl(item.image_url)" :alt="item.item_name" class="w-full h-full object-cover" />
                     </div>
 
                     <!-- Item Details -->
@@ -121,6 +121,29 @@ const filteredClaims = computed(() => {
   return claims.value.filter(claim => claim.claim_status.toLowerCase() === currentFilter.value);
 });
 
+// Helper function to get correct image URL
+const getImageUrl = (url) => {
+    if (!url) return '';
+    
+    // If it's already an absolute URL
+    if (url.startsWith('http')) return url;
+    
+    // If it's a storage URL
+    if (url.startsWith('/storage')) return url;
+    
+    // If it starts with public/
+    if (url.startsWith('public/')) {
+        return '/' + url.substring(7);
+    }
+    
+    // If it doesn't have a leading slash
+    if (!url.startsWith('/')) {
+        return '/storage/' + url;
+    }
+    
+    return url;
+};
+
 // Handle claim status updates
 const handleStatusUpdate = ({ id, status }) => {
   const claimIndex = claims.value.findIndex(claim => claim.claim_id === id);
@@ -155,19 +178,20 @@ const fetchItems = async () => {
             if (claim) {
                 return {
                     ...foundItem,
-                    claim_id: claim.claim_id,  
+                    claim_id: claim.id,
                     claim_status: claim.claim_status,
                     proof_of_ownership: claim.proof_of_ownership,
                     submission_date: claim.submission_date,
                     user_name: usersMap[claim.user_id] || 'Unknown',
+                    // Ensure image_url is properly formatted
+                    image_url: getImageUrl(foundItem.image_url)
                 };
             }
             return null;
         }).filter(item => item !== null);
 
         combinedItems.value = items;
-        claims.value = claimsData;  // Store claims separately for filtering
-
+        claims.value = claimsData;
     } catch (error) {
         console.error('Error fetching items:', error);
     }
@@ -188,7 +212,14 @@ const formatDate = (date) => {
 
 // Show proof image in modal
 const viewProof = (proofUrl) => {
-    console.log('View Proof Image:', proofUrl);
+    if (!proofUrl) {
+        console.error('No proof URL provided');
+        return;
+    }
+
+    const fullUrl = getImageUrl(proofUrl);
+    console.log('Opening image URL:', fullUrl);
+    window.open(window.location.origin + fullUrl, '_blank');
 };
 
 // Update the claim status (approve or reject)
