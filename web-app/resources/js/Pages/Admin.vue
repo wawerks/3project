@@ -13,7 +13,7 @@
       <v-btn icon>
         <v-icon>mdi-bell</v-icon>
       </v-btn>
-      <v-btn text color="secondary" class="logout-btn mt-3" @click="handleSignOut"  style="margin-right: 80px;">
+      <v-btn text color="secondary" class="logout-btn mt-3" @click="handleSignOut" style="margin-right: 80px;">
         Logout
       </v-btn>
     </v-app-bar>
@@ -67,41 +67,9 @@
         </div>
 
         <div v-else-if="currentView === 'claims'" class="space-y-4">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-semibold">Claims Management</h2>
-            <div class="flex space-x-2">
-              <v-btn
-                v-for="filter in ['All', 'Pending', 'Approved', 'Rejected']"
-                :key="filter"
-                :color="currentFilter === filter.toLowerCase() ? 'primary' : ''"
-                @click="currentFilter = filter.toLowerCase()"
-                small
-                outlined
-              >
-                {{ filter }}
-              </v-btn>
-            </div>
-          </div>
-
-          <!-- Claims List -->
-          <div v-if="loading" class="text-center">
-            <v-progress-circular indeterminate color="primary"></v-progress-circular>
-          </div>
-          <div v-else-if="error" class="text-center text-red-500">
-            {{ error }}
-          </div>
-          <div v-else class="grid gap-4">
-            <ClaimedItem
-              v-for="claim in filteredClaims"
-              :key="claim.id"
-              :item="claim.item"
-              :status="claim.status"
-              :proofImage="claim.proof_image"
-              :claimId="claim.id"
-              @status-updated="handleStatusUpdate"
-            />
-          </div>
+          <ClaimedItem />
         </div>
+
       </v-container>
     </v-main>
   </v-app>
@@ -114,42 +82,7 @@ import UsersView from '@/Components/UsersView.vue';
 import UsersLog from '@/Components/UsersLog.vue';
 import ReportedItems from '@/Components/ReportedItems.vue';
 import ClaimedItem from '@/Components/ClaimedItem.vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
-
-const page = usePage();
-const currentView = ref('dashboard');
-const currentFilter = ref('all');
-const claims = ref(page.props.claims || []);
-const loading = ref(false);
-const error = ref(null);
-
-// Handle claim status updates
-const handleStatusUpdate = async ({ id, status }) => {
-  loading.value = true;
-  try {
-    await router.patch(`/admin/claims/${id}/status`, { status }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        const claimIndex = claims.value.findIndex(claim => claim.id === id);
-        if (claimIndex !== -1) {
-          claims.value[claimIndex].status = status;
-        }
-      },
-      onError: () => {
-        error.value = 'Failed to update claim status';
-      }
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
-const filteredClaims = computed(() => {
-  if (currentFilter.value === 'all') {
-    return claims.value;
-  }
-  return claims.value.filter(claim => claim.status.toLowerCase() === currentFilter.value.toLowerCase());
-});
+import { Link, router } from '@inertiajs/vue3';
 
 const handleSignOut = () => {
   router.post(route('logout'), {}, {
@@ -158,6 +91,8 @@ const handleSignOut = () => {
     }
   });
 };
+
+const currentView = ref('dashboard');
 </script>
 
 <style scoped>
