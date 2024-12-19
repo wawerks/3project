@@ -17,7 +17,6 @@ use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\DashboardController; // Added this line
 
 
 Route::get('/claim-status-reports', function () {
@@ -71,15 +70,20 @@ Route::middleware('auth')->group(function () {
     })->middleware('auth'); // Add auth middleware if needed
 });
 
-// Admin Routes
 Route::middleware([CheckRole::class . ':admin'])->group(function () {
-    Route::get('/admin', [ClaimController::class, 'indexAll'])->name('admin.index');
-    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/admin/users-log', [AdminController::class, 'usersLog'])->name('admin.usersLog');
     Route::get('/admin/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reportedItems');
+    Route::post('/admin/users', [AdminController::class, 'store']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+
+    // Claims routes
     Route::patch('/admin/claims/{claim}/status', [ClaimController::class, 'updateStatus'])->name('admin.claims.update-status');
 });
+
 
 // Lost Items routes
 Route::prefix('lost-items')->group(function () {

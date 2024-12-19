@@ -84,13 +84,7 @@
           </div>
 
           <!-- Claims List -->
-          <div v-if="loading" class="text-center">
-            <v-progress-circular indeterminate color="primary"></v-progress-circular>
-          </div>
-          <div v-else-if="error" class="text-center text-red-500">
-            {{ error }}
-          </div>
-          <div v-else class="grid gap-4">
+          <div class="grid gap-4">
             <ClaimedItem
               v-for="claim in filteredClaims"
               :key="claim.id"
@@ -114,42 +108,7 @@ import UsersView from '@/Components/UsersView.vue';
 import UsersLog from '@/Components/UsersLog.vue';
 import ReportedItems from '@/Components/ReportedItems.vue';
 import ClaimedItem from '@/Components/ClaimedItem.vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
-
-const page = usePage();
-const currentView = ref('dashboard');
-const currentFilter = ref('all');
-const claims = ref(page.props.claims || []);
-const loading = ref(false);
-const error = ref(null);
-
-// Handle claim status updates
-const handleStatusUpdate = async ({ id, status }) => {
-  loading.value = true;
-  try {
-    await router.patch(`/admin/claims/${id}/status`, { status }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        const claimIndex = claims.value.findIndex(claim => claim.id === id);
-        if (claimIndex !== -1) {
-          claims.value[claimIndex].status = status;
-        }
-      },
-      onError: () => {
-        error.value = 'Failed to update claim status';
-      }
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
-const filteredClaims = computed(() => {
-  if (currentFilter.value === 'all') {
-    return claims.value;
-  }
-  return claims.value.filter(claim => claim.status.toLowerCase() === currentFilter.value.toLowerCase());
-});
+import { Link, router } from '@inertiajs/vue3';
 
 const handleSignOut = () => {
   router.post(route('logout'), {}, {
@@ -157,6 +116,40 @@ const handleSignOut = () => {
       router.visit('/');
     }
   });
+};
+
+const currentView = ref('dashboard');
+const currentFilter = ref('all');
+const claims = ref([
+  // Sample data - replace with actual API call
+  {
+    id: 1,
+    item: {
+      name: 'Lost Phone',
+      description: 'iPhone 12 Pro Max',
+      location: 'Library',
+      created_at: '2023-12-19',
+      image_url: '/img/sample-item.jpg'
+    },
+    status: 'pending',
+    proof_image: '/img/sample-proof.jpg'
+  },
+  // Add more sample claims as needed
+]);
+
+const filteredClaims = computed(() => {
+  if (currentFilter.value === 'all') {
+    return claims.value;
+  }
+  return claims.value.filter(claim => claim.status === currentFilter.value);
+});
+
+// Handle claim status updates
+const handleStatusUpdate = ({ id, status }) => {
+  const claimIndex = claims.value.findIndex(claim => claim.id === id);
+  if (claimIndex !== -1) {
+    claims.value[claimIndex].status = status;
+  }
 };
 </script>
 
