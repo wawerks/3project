@@ -49,6 +49,11 @@ const router = createRouter({
             name: 'profile',
             component: () => import('./Pages/Profile/Edit.vue'),
         },
+        {
+            path: '/claim',
+            name: 'claim',
+            component: () => import('./Pages/Claim.vue'),
+        },
     ],
 });
 

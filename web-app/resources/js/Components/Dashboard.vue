@@ -53,57 +53,56 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue';
-import PieChart from '@/Components/Charts/PieChart.vue';
-import BarChart from '@/Components/Charts/BarChart.vue';
+import { Pie, Bar } from 'vue-chartjs';
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
 
-export default defineComponent({
+ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
+
+export default {
+  name: 'Dashboard',
   components: {
-    PieChart,
-    BarChart
-  },
-  props: {
-    initialData: {
-      type: Object,
-      default: () => ({
-        totalUsers: 0,
-        lostItems: 0,
-        foundItems: 0,
-        claims: 0
-      })
-    }
+    PieChart: Pie,
+    BarChart: Bar
   },
   data() {
     return {
-      stats: this.initialData,
+      stats: {
+        totalUsers: 0,
+        lostItems: 0,
+        foundItems: 0,
+        claims: 0,
+      },
       pieChartData: {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
+          label: 'Item Statistics',
           data: [0, 0, 0],
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+          hoverOffset: 4
         }]
       },
       barChartData: {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
-          label: 'Total Count',
+          label: 'Item Overview',
           data: [0, 0, 0],
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+          backgroundColor: '#42A5F5',
+          borderColor: '#1E88E5',
+          borderWidth: 1
         }]
       }
     };
   },
   mounted() {
     this.fetchDashboardData();
-    // Update charts with initial data
-    this.updateCharts(this.stats);
+  },
+  watch: {
+    stats(newStats) {
+      this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+      this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+    }
   },
   methods: {
-    updateCharts(stats) {
-      const data = [stats.lostItems, stats.foundItems, stats.claims];
-      this.pieChartData.datasets[0].data = data;
-      this.barChartData.datasets[0].data = data;
-    },
     async fetchDashboardData() {
       try {
         const response = await fetch('/admin/dashboard');
@@ -111,23 +110,24 @@ export default defineComponent({
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
+
         // Update the stats
         this.stats = {
-          totalUsers: data.totalUsers || 0,
-          lostItems: data.lostItems || 0,
-          foundItems: data.foundItems || 0,
-          claims: data.claims || 0
+          totalUsers: data.totalUsers,
+          lostItems: data.lostItems,
+          foundItems: data.foundItems,
+          claims: data.claims,
         };
-        
-        // Update charts
-        this.updateCharts(this.stats);
+
+        // Update pie and bar chart data
+        this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
+        this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
     }
   }
-});
+}
 </script>
 
 <style scoped>
