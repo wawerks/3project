@@ -72,7 +72,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['auth', 'role:admin'])->group(function () {
+Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::get('/admin', [ClaimController::class, 'indexAll'])->name('admin.index');
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
