@@ -76,7 +76,7 @@ export default {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
           label: 'Item Statistics',
-          data: [0, 0, 0],  
+          data: [0, 0, 0],
           backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
           hoverOffset: 4
         }]
@@ -85,7 +85,7 @@ export default {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
           label: 'Item Overview',
-          data: [0, 0, 0],  // Initial data, will be updated on fetch
+          data: [0, 0, 0],
           backgroundColor: '#42A5F5',
           borderColor: '#1E88E5',
           borderWidth: 1
@@ -97,19 +97,9 @@ export default {
     this.fetchDashboardData();
   },
   watch: {
-    stats: {
-      handler(newStats) {
-        console.log('Stats updated:', newStats);
-        // Update chart data
-        this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-        this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-        // Force charts to update
-        this.$nextTick(() => {
-          this.$refs.pieChart.chart.update();
-          this.$refs.barChart.chart.update();
-        });
-      },
-      deep: true
+    stats(newStats) {
+      this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+      this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
     }
   },
   methods: {
@@ -120,23 +110,18 @@ export default {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
-        // Update the stats and charts
+
+        // Update the stats
         this.stats = {
           totalUsers: data.totalUsers,
           lostItems: data.lostItems,
           foundItems: data.foundItems,
           claims: data.claims,
         };
-        
+
         // Update pie and bar chart data
         this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
         this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
-        
-        this.$nextTick(() => {
-          this.$refs.pieChart.chart.update();
-          this.$refs.barChart.chart.update();
-        });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
