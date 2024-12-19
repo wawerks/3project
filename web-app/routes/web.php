@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\DashboardController; // Added this line
 
 
 Route::get('/claim-status-reports', function () {
@@ -30,11 +31,11 @@ Route::get('/user-id', [UserController::class, 'getID'])->name('user.id');
 Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
 
 // Claims Routes
-Route::get('/claims', [ClaimController::class, 'index']);
-Route::post('/claims', [ClaimController::class, 'store']);
-Route::put('/claims/{id}', [ClaimController::class, 'update']);
-Route::get('/claims/{id}', [ClaimController::class, 'show']);
-Route::get('/claim-items', [ClaimController::class, 'showAll']);
+Route::middleware(['auth'])->group(function () {
+    Route::post('/claims', [ClaimController::class, 'store']);
+    Route::get('/claims/{id}', [ClaimController::class, 'show']);
+    Route::get('/claim-items', [ClaimController::class, 'showAll']);
+});
 
 // Notification Routes (Authenticated)
 Route::middleware('auth:sanctum')->group(function () {
@@ -70,20 +71,15 @@ Route::middleware('auth')->group(function () {
     })->middleware('auth'); // Add auth middleware if needed
 });
 
-Route::middleware([CheckRole::class . ':admin'])->group(function () {
-    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
-    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+// Admin Routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin', [ClaimController::class, 'indexAll'])->name('admin.index');
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/admin/users-log', [AdminController::class, 'usersLog'])->name('admin.usersLog');
     Route::get('/admin/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reportedItems');
-    Route::post('/admin/users', [AdminController::class, 'store']);
-    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
-    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
-
-    // Claims routes
     Route::patch('/admin/claims/{claim}/status', [ClaimController::class, 'updateStatus'])->name('admin.claims.update-status');
 });
-
 
 // Lost Items routes
 Route::prefix('lost-items')->group(function () {
