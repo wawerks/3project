@@ -30,11 +30,11 @@ Route::get('/user-id', [UserController::class, 'getID'])->name('user.id');
 Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
 
 // Claims Routes
-Route::middleware(['auth'])->group(function () {
-    Route::post('/claims', [ClaimController::class, 'store']);
-    Route::get('/claims/{id}', [ClaimController::class, 'show']);
-    Route::get('/claim-items', [ClaimController::class, 'showAll']);
-});
+Route::get('/claims', [ClaimController::class, 'index']);
+Route::post('/claims', [ClaimController::class, 'store']);
+Route::put('/claims/{id}', [ClaimController::class, 'update']);
+Route::get('/claims/{id}', [ClaimController::class, 'show']);
+Route::get('/claim-items', [ClaimController::class, 'showAll']);
 
 // Notification Routes (Authenticated)
 Route::middleware('auth:sanctum')->group(function () {
