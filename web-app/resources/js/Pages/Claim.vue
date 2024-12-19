@@ -34,7 +34,7 @@
                                         <div class="text-sm text-gray-500">
                                             <p>Posted by: {{ item.user?.name }}</p>
                                             <p>Date: {{ formatDate(item.created_at) }}</p>
-                                            <p>Facebook: <a :href="item.facebook_link" target="_blank" class="text-blue-500">Visit Facebook</a></p>
+                                            <p>Location: {{ item.location }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -153,6 +153,9 @@ const submitClaim = () => {
             imageFile.value = null;
 
             console.log("Form submission succeeded. Image preview and file reset.");
+
+            // Redirect to home page after successful submission using window.location.href
+            window.location.href = '/';
         },
         onError: (errors) => {
             console.error("Submission failed:", errors);
@@ -167,11 +170,8 @@ const submitClaim = () => {
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
         year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        month: 'long',
+        day: 'numeric'
     });
 };
 </script>

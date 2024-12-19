@@ -49,7 +49,7 @@ class ClaimController extends Controller
         ]);
     
         // Instead of returning an Inertia response, return a redirect
-        return redirect('/newsfeed'); 
+        return redirect('/');  // Redirect to the homepage or any other page you'd like after submission
     }
     
     
@@ -124,5 +124,42 @@ class ClaimController extends Controller
             'item' => $item,
             'itemType' => $itemType,
         ]);
+    }
+
+    /**
+     * Get all claims with related data.
+     */
+    public function indexAll()
+    {
+        try {
+            $claims = Claim::with(['user', 'foundItem'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($claim) {
+                    return [
+                        'id' => $claim->id,
+                        'status' => $claim->claim_status,
+                        'submission_date' => $claim->submission_date,
+                        'proof_of_ownership' => $claim->proof_of_ownership,
+                        'user' => $claim->user,
+                        'found_item' => $claim->foundItem,
+                        'created_at' => $claim->created_at
+                    ];
+                });
+
+            if (request()->wantsJson()) {
+                return response()->json(['data' => $claims]);
+            }
+
+            return Inertia::render('Admin', [
+                'claims' => $claims
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching claims: ' . $e->getMessage());
+            if (request()->wantsJson()) {
+                return response()->json(['error' => 'Failed to fetch claims'], 500);
+            }
+            return back()->with('error', 'Failed to fetch claims');
+        }
     }
 }

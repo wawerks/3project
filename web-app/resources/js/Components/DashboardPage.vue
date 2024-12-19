@@ -448,8 +448,7 @@ export default {
 
     console.log("Form submitted successfully:", response);
     // Show success message and refresh the posts
-    // this.showSuccess("Post created successfully!");
-    location.reload(true);
+    this.showSuccess("Post created successfully!");
     this.closeAllModals();
     await this.fetchPosts();
   } catch (error) {
