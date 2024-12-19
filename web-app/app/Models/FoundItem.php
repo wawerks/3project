@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\Notification;
 use App\Models\Comment;
 use App\Models\User;
+use App\Models\Claim;
+
 
 class FoundItem extends Model
 {
@@ -74,5 +76,10 @@ class FoundItem extends Model
                 'item_name' => $item->item_name
             ]);
         });
+    }
+
+    public function claim()
+    {
+        return $this->belongsTo(Claim::class, 'claim_id');
     }
 }
