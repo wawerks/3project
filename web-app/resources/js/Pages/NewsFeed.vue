@@ -36,10 +36,10 @@
           <div v-if="item.image_url" class="mb-4 overflow-hidden rounded-lg">
             <img :src="item.image_url" alt="Lost Item" class="w-full object-cover rounded-lg shadow-sm" />
           </div>
-          <div class="flex justify-end">
+          <div v-if="item.isFound && !item.isOwner" class="flex justify-end">
             <button 
               @click="handleClaim(item)"
-              class="bg-green-500 hover:bg-green-600 mt-5 text-white px-4 py-2 rounded-lg flex  items-center space-x-2 transition-colors duration-200"
+              class="bg-green-500 hover:bg-green-600 mt-5 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -52,16 +52,21 @@
           <div class="">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Comments</h3>
 
-            <!-- Comment Button -->
-            <button @click="openCommentModal(item)"
-              class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-2" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
-              </svg>
-              <span>Comments ({{ item.comments?.length || 0 }})</span>
-            </button>
+            <div class="flex items-center space-x-4">
+              <!-- Comment Button -->
+              <button @click="openCommentModal(item)"
+                class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-2" fill="none" stroke="currentColor"
+                  viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
+                </svg>
+                <span>Comments ({{ item.comments?.length || 0 }})</span>
+              </button>
+
+              <!-- See Map Text -->
+              <a href="#" @click.prevent="showMap(item)" class="text-blue-500 hover:text-blue-600">See Location</a>
+            </div>
 
             <!-- Comment Modal -->
             <CommentModal
@@ -79,75 +84,101 @@
       </div>
     </div>
 
+    <!-- Map Modal -->
+    <div v-if="showMapModal" class="fixed inset-0 z-50">
+      <!-- Backdrop with blur -->
+      <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+      
+      <!-- Modal Content -->
+      <div class="relative flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg w-11/12 md:w-3/4 lg:w-2/3 xl:w-1/2 h-[600px] relative">
+          <div class="flex justify-between items-center p-4 border-b">
+            <h3 class="text-lg font-semibold">Item Location</h3>
+            <button @click="closeMap" class="text-gray-500 hover:text-gray-700">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="h-[calc(100%-4rem)]">
+            <Map ref="mapRef" :disabled="false" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <FooterBar />
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
 import axios from "axios";
 import HeaderBar from "@/Components/HeaderBar.vue";
 import FooterBar from "@/Components/FooterBar.vue";
 import CommentModal from "@/Components/CommentModal.vue";
-import { router } from '@inertiajs/vue3';
+import Map from "@/Components/map.vue"; // Import Map component
+import { router, usePage } from '@inertiajs/vue3';
 
 export default {
   name: "NewsFeed",
-  components: { HeaderBar, FooterBar, CommentModal },
+  components: { HeaderBar, FooterBar, CommentModal, Map }, // Add Map component
   setup() {
+    const page = usePage();
     const lostItems = ref([]);
     const loading = ref(true);
     const newComments = ref({});
     const userName = ref(null);
     const currentUserId = ref(null);
+    const csrfToken = ref(null);
     const activeCommentModal = ref(null);
     const selectedItem = ref(null);
+    const showMapModal = ref(false); // Add showMapModal ref
+    const mapRef = ref(null);
 
-    // Fetch the current user's ID
-    const fetchCurrentUser = async () => {
+    // Get CSRF token and current user's ID
+    const initializeUserData = () => {
       try {
-        if (!window.userID) {
-          console.error("window.userID is not defined.");
-          return;
+        // Get CSRF token from meta tag
+        const tokenElement = document.querySelector('meta[name="csrf-token"]');
+        if (tokenElement) {
+          csrfToken.value = tokenElement.getAttribute('content');
+          console.log('CSRF Token:', csrfToken.value);
+        } else {
+          console.error('CSRF token meta tag not found');
         }
 
-        const response = await axios.get(window.userID);
-        currentUserId.value = response.data.id;
-        console.log("Fetched user ID:", currentUserId.value);
-
-        fetchUser();
+        // Get user from Inertia auth data
+        const user = page.props.auth?.user;
+        if (user) {
+          currentUserId.value = user.id;
+          userName.value = user.name;
+          console.log('Authenticated User:', {
+            id: currentUserId.value,
+            name: userName.value,
+            csrfToken: csrfToken.value ? 'Present' : 'Missing'
+          });
+        } else {
+          console.error('No authenticated user found');
+        }
       } catch (error) {
-        console.error("Error fetching user ID:", error.message);
+        console.error('Error initializing user data:', error);
       }
     };
 
-    // Fetch the current user's name based on the currentUserId
-    const fetchUser = async () => {
-      try {
-        if (!currentUserId.value) {
-          console.error("Current user ID is not set.");
-          return;
-        }
-
-        const response = await axios.get("/users");
-        console.log("Response data:", response.data);
-
-        if (Array.isArray(response.data)) {
-          const user = response.data.find(u => u.id === currentUserId.value);
-
-          if (user) {
-            userName.value = user.name;
-            console.log("User fetched:", userName.value);
-          } else {
-            console.log("User not found.");
-          }
-        } else {
-          console.error("Invalid response data format. Expected an array.");
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error.message);
-      }
+    // Check if user is item owner
+    const isItemOwner = (item) => {
+      const userId = Number(currentUserId.value);
+      const itemUserId = Number(item.user_id);
+      const isOwner = userId === itemUserId;
+      console.log('Ownership check:', {
+        itemId: item.id,
+        itemUserId,
+        currentUserId: userId,
+        isOwner
+      });
+      return isOwner;
     };
 
     // Fetch posts (lost and found items)
@@ -160,23 +191,37 @@ export default {
 
         const lostPosts = lost.data.map(async (item) => {
           const user = await fetchUserById(item.user_id);
+          console.log('Lost Item:', { 
+            itemId: item.id,
+            userId: item.user_id, 
+            currentUserId: currentUserId.value,
+            isOwner: item.user_id === currentUserId.value 
+          });
           return {
             ...item,
             isFound: false,
             comments: [],
             showCommentSection: false,
             userName: user.name,
+            isOwner: isItemOwner(item)
           };
         });
 
         const foundPosts = found.data.map(async (item) => {
           const user = await fetchUserById(item.user_id);
+          console.log('Found Item:', { 
+            itemId: item.id,
+            userId: item.user_id, 
+            currentUserId: currentUserId.value,
+            isOwner: item.user_id === currentUserId.value 
+          });
           return {
             ...item,
             isFound: true,
             comments: [],
             showCommentSection: false,
             userName: user.name,
+            isOwner: isItemOwner(item)
           };
         });
 
@@ -260,6 +305,10 @@ export default {
           item_id: itemId,
           text: text.trim(),
           item_type: itemType
+        }, {
+          headers: {
+            'X-CSRF-TOKEN': csrfToken.value
+          }
         });
 
         // Find the item and add the new comment
@@ -309,6 +358,27 @@ export default {
       selectedItem.value = null;
     };
 
+    // Show map modal and set location
+    const showMap = (item) => {
+      showMapModal.value = true;
+      nextTick(async () => {
+        if (mapRef.value) {
+          // Initialize map if needed
+          if (!mapRef.value.map) {
+            await mapRef.value.initializeMap();
+          }
+          
+          // Convert location string to lat/lng object
+          const [lat, lng] = item.location.split(',').map(Number);
+          mapRef.value.setLocation({ lat, lng });
+        }
+      });
+    };
+
+    const closeMap = () => {
+      showMapModal.value = false;
+    };
+
     // Format date helper function
     const formatDate = (date) => {
       return new Date(date).toLocaleDateString('en-US', {
@@ -320,21 +390,31 @@ export default {
       });
     };
 
+    // Initialize on component mount
     onMounted(() => {
-      fetchCurrentUser();
+      initializeUserData();
       fetchPosts();
     });
 
     return {
       lostItems,
       loading,
+      currentUserId,
+      csrfToken,
+      userName,
       activeCommentModal,
       selectedItem,
+      newComments,
+      isItemOwner,
       handleClaim,
-      submitComment,
       openCommentModal,
       closeCommentModal,
-      formatDate
+      submitComment,
+      formatDate,
+      showMapModal,
+      showMap,
+      closeMap,
+      mapRef,
     };
   }
 };
@@ -660,6 +740,4 @@ footer {
   padding: 1rem;
   text-align: center;
 }
-
-
 </style>
