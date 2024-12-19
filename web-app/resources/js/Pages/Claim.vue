@@ -1,6 +1,7 @@
 <template>
+
     <Head title="Claim" />
-    <HeaderBar/>
+    <HeaderBar />
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -24,7 +25,8 @@
                                 <div class="w-1/2">
                                     <!-- Item Image -->
                                     <div v-if="item.image_url" class="mb-4">
-                                        <img :src="item.image_url" :alt="item.item_name" class="w-full h-auto rounded-lg shadow-md object-cover" />
+                                        <img :src="item.image_url" :alt="item.item_name"
+                                            class="w-full h-auto rounded-lg shadow-md object-cover" />
                                     </div>
 
                                     <!-- Item Information -->
@@ -44,29 +46,35 @@
                                     <div class="flex flex-col items-center">
                                         <!-- Image Preview -->
                                         <div v-if="imagePreview" class="w-full mb-4 relative">
-                                            <img :src="imagePreview" class="w-full h-auto rounded-lg shadow-md object-cover" />
-                                            <button @click="removeImage" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            <img :src="imagePreview"
+                                                class="w-full h-auto rounded-lg shadow-md object-cover" />
+                                            <button @click="removeImage"
+                                                class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                 </svg>
                                             </button>
                                         </div>
-                                        
+
                                         <!-- Upload Button -->
                                         <div v-if="!imagePreview" class="w-full">
-                                            <label class="w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border border-blue-500 cursor-pointer hover:bg-blue-500 hover:text-white transition-colors duration-200">
-                                                <svg class="w-8 h-8" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                                    <path d="M16.88 9.1A4 4 0 0 1 16 17H5a5 5 0 0 1-1-9.9V7a3 3 0 0 1 4.52-2.59A4.98 4.98 0 0 1 17 8c0 .38-.04.74-.12 1.1zM11 11h3l-4-4-4 4h3v3h2v-3z" />
+                                            <label
+                                                class="w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border border-blue-500 cursor-pointer hover:bg-blue-500 hover:text-white transition-colors duration-200">
+                                                <svg class="w-8 h-8" fill="currentColor"
+                                                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M16.88 9.1A4 4 0 0 1 16 17H5a5 5 0 0 1-1-9.9V7a3 3 0 0 1 4.52-2.59A4.98 4.98 0 0 1 17 8c0 .38-.04.74-.12 1.1zM11 11h3l-4-4-4 4h3v3h2v-3z" />
                                                 </svg>
                                                 <span class="mt-2 text-sm">Select an image</span>
-                                                <input type="file" class="hidden" accept="image/*" @change="handleImageUpload" />
+                                                <input type="file" class="hidden" accept="image/*"
+                                                    @change="handleImageUpload" />
                                             </label>
                                         </div>
 
                                         <!-- Submit Button -->
-                                        <button 
-                                            @click="submitClaim" 
-                                            :disabled="!imagePreview"
+                                        <button @click="submitClaim" :disabled="!imagePreview"
                                             class="mt-4 w-full px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200">
                                             Submit Claim
                                         </button>
@@ -80,7 +88,7 @@
         </div>
     </div>
     <div class="footer-fixed">
-        <FooterBar/>
+        <FooterBar />
     </div>
 </template>
 
@@ -155,7 +163,7 @@ const submitClaim = () => {
             console.log("Form submission succeeded. Image preview and file reset.");
 
             // Redirect to home page after successful submission using window.location.href
-            window.location.href = '/';
+            window.location.href = '/newsfeed';
         },
         onError: (errors) => {
             console.error("Submission failed:", errors);
@@ -163,8 +171,6 @@ const submitClaim = () => {
         },
     });
 };
-
-
 
 
 const formatDate = (date) => {
