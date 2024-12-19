@@ -14,8 +14,7 @@ class Comment extends Model
         'text',
         'commentable_id',
         'commentable_type',
-        'item_type',
-        'item_id'
+        'item_type'
     ];
 
     protected $with = ['user'];

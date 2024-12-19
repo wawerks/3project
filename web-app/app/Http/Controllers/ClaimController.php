@@ -96,6 +96,48 @@ class ClaimController extends Controller
 
 
     /**
+     * Update the claim's status.
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+    
+            $claim = Claim::where('claim_id', $id)->firstOrFail();  // Use claim_id for lookup
+     
+            // Validate the claim status
+            $validated = $request->validate([
+                'claim_status' => 'required|in:approved,rejected',
+            ]);
+     
+            // Update the claim status
+            $claim->update([
+                'claim_status' => ucfirst($validated['claim_status']), // Capitalize first letter
+            ]);
+    
+            DB::commit();
+    
+            // Return the updated claim with related data
+            return response()->json([
+                'success' => true,
+                'claim' => $claim->load('user', 'foundItem')
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false, 
+                'message' => 'Claim not found'
+            ], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false, 
+                'message' => 'Failed to update claim status'
+            ], 500);
+        }
+    }
+    /**
      * Show a specific claim.
      */
     public function show($id)
@@ -104,10 +146,34 @@ class ClaimController extends Controller
         return response()->json($claim);
     }
 
-    public function showAll() // display all claims
+    /**
+     * Show all claims with related data.
+     */
+    public function showAll()
     {
-        $claim = Claim::all();
-        return response()->json($claim);
+        $claims = Claim::with(['user', 'foundItem'])->get()->map(function ($claim) {
+            $proofUrl = $claim->proof_of_ownership;
+            if ($proofUrl && !str_starts_with($proofUrl, '/storage/')) {
+                $proofUrl = '/storage/' . $proofUrl;
+            }
+
+            return [
+                'claim_id' => $claim->claim_id,
+                'item_id' => $claim->item_id,
+                'user_id' => $claim->user_id,
+                'claim_status' => $claim->claim_status,
+                'submission_date' => $claim->submission_date,
+                'proof_of_ownership' => $proofUrl,
+                'user_name' => $claim->user->name,
+                'item_name' => $claim->foundItem->item_name,
+                'description' => $claim->foundItem->description,
+                'category' => $claim->foundItem->category,
+                'found_date' => $claim->foundItem->found_date,
+                'image_url' => $claim->foundItem->image_url,
+            ];
+        });
+
+        return response()->json($claims);
     }
 
    /**

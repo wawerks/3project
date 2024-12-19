@@ -17,7 +17,7 @@ use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Middleware\LogActivity;
+
 
 Route::get('/claim-status-reports', function () {
     return ClaimStatusReport::all();
@@ -35,6 +35,7 @@ Route::post('/claims', [ClaimController::class, 'store']);
 Route::put('/claims/{id}', [ClaimController::class, 'update']);
 Route::get('/claims/{id}', [ClaimController::class, 'show']);
 Route::get('/claim-items', [ClaimController::class, 'showAll']);
+Route::patch('/claims/{id}/status', [ClaimController::class, 'updateStatus']);
 
 // Notification Routes (Authenticated)
 Route::middleware('auth:sanctum')->group(function () {
@@ -84,32 +85,32 @@ Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::patch('/admin/claims/{claim}/status', [ClaimController::class, 'updateStatus'])->name('admin.claims.update-status');
 });
 
+
 // Lost Items routes
-Route::prefix('lost-items')->middleware(['auth', 'web', LogActivity::class])->group(function () {
-    Route::get('/', [LostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
-    Route::get('{id}', [LostItemController::class, 'show'])->name('lost-items.show'); // Display a specific lost item
-    Route::post('/', [LostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
-    Route::put('{id}', [LostItemController::class, 'update'])->name('lost-items.update'); // Update an existing lost item
-    Route::delete('{id}', [LostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
+Route::prefix('lost-items')->group(function () {
+    Route::get('/', [lostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
+    Route::get('{id}', [lostItemController::class, 'show'])->name('lost-items.show'); // Display a specific lost item
+    Route::post('/', [lostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
+    Route::put('{id}', [lostItemController::class, 'update'])->name('lost-items.update'); // Update an existing lost item
+    Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
     Route::get('/user/{userId}', [LostItemController::class, 'getLostItemsByUser']);
 });
 
-// Found Items routes
-Route::prefix('found-items')->middleware(['auth', 'web', LogActivity::class])->group(function () {
+
+Route::prefix('comments')->group(function () {
+    Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
+    Route::get('/', [CommentController::class, 'view'])->name('comments.view');
+    Route::post('/', [CommentController::class, 'store'])->name('comments.store');
+});
+
+// Found Items Routes
+// Route::resource('found-items', FoundItemController::class);
+Route::prefix('found-items')->group(function () {
     Route::get('/', [FoundItemController::class, 'index'])->name('found-items.index'); // List all found items
     Route::get('{id}', [FoundItemController::class, 'show'])->name('found-items.show'); // Display a specific found item
     Route::post('/', [FoundItemController::class, 'store'])->name('found-items.store'); // Store a new found item
     Route::put('{id}', [FoundItemController::class, 'update'])->name('found-items.update'); // Update an existing found item
     Route::delete('{id}', [FoundItemController::class, 'destroy'])->name('found-items.destroy'); // Delete a found item
-});
-
-// Comments routes
-Route::prefix('comments')->middleware(['auth', 'web', LogActivity::class])->group(function () {
-    Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
-    Route::get('/', [CommentController::class, 'view'])->name('comments.view');
-    Route::post('/', [CommentController::class, 'store'])->name('comments.store');
-    Route::put('/{id}', [CommentController::class, 'update'])->name('comments.update');
-    Route::delete('/{id}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
 Route::get('/session', [SessionController::class, 'show']); // To view session details

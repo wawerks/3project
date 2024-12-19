@@ -1,112 +1,91 @@
 <template>
     <div class="container mx-auto px-4 py-8">
-        <!-- Combined Found Items and Claims Section -->
-        <div v-if="combinedItems.length" class="space-y-6">
-            <div v-for="item in combinedItems" :key="item.id" class="bg-white rounded-lg shadow-lg p-6">
-                
-                <!-- Claims Management Header -->
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Claims Management</h2>
-                    <div class="flex space-x-2">
-                        <v-btn
-                            v-for="filter in ['All', 'Pending', 'Approved', 'Rejected']"
-                            :key="filter"
-                            :color="currentFilter === filter.toLowerCase() ? 'primary' : 'grey'"
-                            @click="currentFilter = filter.toLowerCase()"
-                            small
-                            outlined
-                            class="rounded-md"
-                        >
-                            {{ filter }}
-                        </v-btn>
-                    </div>
+        <div class="bg-white rounded-lg shadow-lg p-8 min-h-screen">
+            <!-- Claims Management Header -->
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Claims Management</h2>
+                <div class="flex space-x-2">
+                    <button
+                        v-for="filter in ['All', 'Pending', 'Approved', 'Rejected']"
+                        :key="filter"
+                        :class="[
+                            'px-4 py-2 rounded-md transition-colors duration-200',
+                            currentFilter === filter.toLowerCase()
+                                ? 'bg-teal-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ]"
+                        @click="currentFilter = filter.toLowerCase()"
+                    >
+                        {{ filter }}
+                    </button>
                 </div>
+            </div>
 
-                <!-- Item Details Section -->
-                <div class="flex items-center space-x-6">
-                    <!-- Item Image -->
-                    <div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
-                        <img 
-                            :src="item.image_url && item.image_url.startsWith('/') ? item.image_url : '/' + item.image_url" 
-                            :alt="item.item_name" 
-                            class="w-full h-full object-cover"
-                            @error="handleImageError"
-                        />
-                    </div>
+            <!-- Loading State -->
+            <div v-if="loading" class="flex justify-center items-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+            </div>
 
-                    <!-- Item Details -->
-                    <div class="flex-grow">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-xl font-semibold text-gray-800">{{ item.item_name }}</h3>
-                            <span :class="[ 'px-3 py-1 rounded-full text-sm font-medium', {
-                                    'bg-yellow-100 text-yellow-800': item.claim_status === 'pending',
-                                    'bg-green-100 text-green-800': item.claim_status === 'approved',
-                                    'bg-red-100 text-red-800': item.claim_status === 'rejected'
+            <!-- Combined Found Items and Claims Section -->
+            <div v-else-if="filteredClaims.length" class="space-y-6">
+                <!-- Iterate Over Each Item -->
+                <div v-for="claim in filteredClaims" :key="claim.id" class="bg-gray-50 rounded-lg shadow p-6 hover:shadow-md transition-shadow duration-200">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-start space-x-6">
+                            <!-- Item Image -->
+                            <div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
+                                <img 
+                                    :src="claim.image_url" 
+                                    :alt="claim.item_name" 
+                                    class="w-full h-full object-cover"
+                                    @error="handleImageError"
+                                />
+                            </div>
 
-                                }]">
-                                {{ item.claim_status ? item.claim_status.charAt(0).toUpperCase() + item.claim_status.slice(1) : 'Unknown' }}
-                            </span>
+                            <!-- Item Details -->
+                            <div class="flex-grow">
+                                <h3 class="text-xl font-semibold text-gray-800">{{ claim.item_name }}</h3>
+                                <p class="text-gray-600 text-sm mb-2">{{ claim.description }}</p>
+                                <div class="text-sm text-gray-500 mb-2">
+                                    <p><strong>Category:</strong> {{ claim.category }}</p>
+                                    <p v-if="claim.found_date"><strong>Found Date:</strong> {{ formatDate(claim.found_date) }}</p>
+                                    <p><strong>Claimed By:</strong> {{ claim.user_name }}</p>
+                                    <p><strong>Submission Date:</strong> {{ formatDate(claim.submission_date) }}</p>
+                                    <p v-if="claim.proof_of_ownership">
+                                        <strong>Proof of Ownership:</strong>
+                                        <button @click="viewProof(claim.proof_of_ownership)" class="text-teal-600 hover:underline text-sm ml-2">
+                                            View Proof Image
+                                        </button>
+                                    </p>
+                                </div>
+                                <span :class="getStatusClass(claim.claim_status)">
+                                    {{ formatStatus(claim.claim_status) }}
+                                </span>
+                            </div>
                         </div>
 
-                        <p class="text-gray-600 text-sm mb-4">{{ item.description }}</p>
-
-                        <div class="text-sm text-gray-500 mb-2">
-                            <p><strong>Category:</strong> {{ item.category }}</p>
-                            <p v-if="item.found_date"><strong>Found Date:</strong> {{ formatDate(item.found_date) }}</p>
-                            <p v-if="item.submission_date"><strong>Claim Submission Date:</strong> {{ formatDate(item.submission_date) }}</p>
-                        </div>
-
-                        <div class="text-sm text-gray-500 mb-4">
-                            <p><strong>Submitted By:</strong> {{ item.user_name }}</p>
-                        </div>
-
-                        <div class="text-sm text-gray-500">
-                            <p v-if="item.contact_number"><strong>Contact Number:</strong> {{ item.contact_number }}</p>
-                            <p v-if="item.proof_of_ownership">
-                                <strong>Proof of Ownership:</strong>
-                                <button @click="viewProof(item.proof_of_ownership)" class="text-teal-600 hover:underline text-sm">
-                                    View Proof Image
-                                </button>
-                            </p>
-                        </div>
-
-                        <!-- Action Buttons for Approval/Rejection -->
-                        <div class="mt-6 flex space-x-4">
-                            <button @click="updateClaimStatus(item.claim_id, 'Approved')" class="w-1/2 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm flex items-center justify-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
+                        <!-- Action buttons for pending items - Now on the right -->
+                        <div v-if="claim.claim_status.toLowerCase() === 'pending'" class="flex flex-col space-y-2 ml-4">
+                            <button 
+                                @click="updateClaimStatus(claim.claim_id, 'approved')"
+                                class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center justify-center min-w-[100px]"
+                            >
                                 Approve
                             </button>
-                            <button @click="updateClaimStatus(item.claim_id, 'Rejected')" class="w-1/2 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm flex items-center justify-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                            <button 
+                                @click="updateClaimStatus(claim.claim_id, 'rejected')"
+                                class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center justify-center min-w-[100px]"
+                            >
                                 Reject
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Claims List: Display filtered claims for each item -->
-                <div class="mt-6">
-                    <h4 class="text-lg font-semibold text-gray-700 mb-4">Claims</h4>
-                    <div v-for="claim in filteredClaims" :key="claim.claim_id" class="bg-gray-100 p-4 rounded-lg mb-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <p class="text-sm font-semibold text-gray-700">Claim #{{ claim.claim_id }}</p>
-                            <p :class="[ 'px-3 py-1 rounded-full text-sm font-medium', {
-                                    'bg-yellow-100 text-yellow-800': claim.claim_status === 'pending',
-                                    'bg-green-100 text-green-800': claim.claim_status === 'approved',
-                                    'bg-red-100 text-red-800': claim.claim_status === 'rejected'
-                                }]">
-                                {{ claim.claim_status ? claim.claim_status.charAt(0).toUpperCase() + claim.claim_status.slice(1) : 'Unknown' }}
-                            </p>
-                        </div>
-                        <button @click="viewProof(claim.proof_of_ownership)" class="text-teal-600 hover:underline text-sm">
-                            View Proof of Ownership
-                        </button>
-                    </div>
-                </div>
+            </div>
+            
+            <!-- No Items Message -->
+            <div v-else class="text-center text-gray-500 py-8">
+                No claims found for the selected filter.
             </div>
         </div>
     </div>
@@ -114,18 +93,46 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
-// State for combined items and current filter
+const page = usePage();
+const isAdmin = computed(() => page.props.auth?.user?.role === 'admin');
+const showActionButtons = computed(() => isAdmin.value);
+
+// State for items and filter
 const currentFilter = ref('all');
 const claims = ref([]);
+const loading = ref(true); // Add loading state
 
 // Filtered claims based on the selected filter
 const filteredClaims = computed(() => {
-  if (currentFilter.value === 'all') {
-    return claims.value;
-  }
-  return claims.value.filter(claim => claim.claim_status.toLowerCase() === currentFilter.value);
+    if (!claims.value) return [];
+    if (currentFilter.value === 'all') {
+        return claims.value;
+    }
+    return claims.value.filter(claim => 
+        claim.claim_status.toLowerCase() === currentFilter.value.toLowerCase()
+    );
 });
+
+// Helper functions for status display
+const formatStatus = (status) => {
+    if (!status) return 'Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
+
+const getStatusClass = (status) => {
+    const baseClasses = 'px-3 py-1 rounded-full text-sm font-medium';
+    const statusLower = status?.toLowerCase() || '';
+    
+    const statusClasses = {
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'approved': 'bg-green-100 text-green-800',
+        'rejected': 'bg-red-100 text-red-800'
+    };
+    
+    return `${baseClasses} ${statusClasses[statusLower] || 'bg-gray-100 text-gray-800'}`;
+};
 
 // Handle image loading error
 const handleImageError = (e) => {
@@ -157,60 +164,77 @@ const getImageUrl = (url) => {
     return url;
 };
 
-// Handle claim status updates
-const handleStatusUpdate = ({ id, status }) => {
-  const claimIndex = claims.value.findIndex(claim => claim.claim_id === id);
-  if (claimIndex !== -1) {
-    claims.value[claimIndex] = { ...claims.value[claimIndex], claim_status: status };
-    currentFilter.value = currentFilter.value; // Triggers reactivity
-  }
-};
+// Update claim status
+const updateClaimStatus = async (claimId, newStatus) => {
+    try {
+        if (!claimId) {
+            console.error('No claim ID provided');
+            return;
+        }
 
-// State for combined items
-const combinedItems = ref([]);
+        loading.value = true; // Show loading while updating
+        console.log('Updating claim:', { claimId, newStatus }); // Debug log
+
+        const response = await fetch(`/claims/${claimId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ claim_status: newStatus.toLowerCase() })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update claim status');
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update the local state
+            claims.value = claims.value.map(claim => 
+                claim.claim_id === claimId 
+                    ? { ...claim, claim_status: newStatus.charAt(0).toUpperCase() + newStatus.slice(1) }
+                    : claim
+            );
+
+            // Show success message
+            alert(`Claim has been ${newStatus} successfully`);
+            
+            // Refresh the claims list
+            await fetchItems();
+        } else {
+            throw new Error(result.message || 'Failed to update claim status');
+        }
+    } catch (error) {
+        console.error('Error updating claim status:', error);
+        alert('Failed to update claim status. Please try again.');
+    } finally {
+        loading.value = false; // Hide loading after update
+    }
+};
 
 // Fetch items from the API
 const fetchItems = async () => {
+    loading.value = true; // Show loading while fetching
     try {
-        const foundItemsResponse = await fetch('/found-items');
-        const foundItemsData = await foundItemsResponse.json();
+        const response = await fetch('/claim-items');
+        const claimsData = await response.json();
         
-        const claimsResponse = await fetch('/claim-items');
-        const claimsData = await claimsResponse.json();
+        // Process and store the claims
+        claims.value = claimsData.map(claim => ({
+            ...claim,
+            image_url: claim.image_url && !claim.image_url.startsWith('/') 
+                ? '/' + claim.image_url 
+                : claim.image_url
+        }));
 
-        const usersResponse = await fetch('/users');
-        const usersData = await usersResponse.json();
-        
-        const usersMap = usersData.reduce((map, user) => {
-            map[user.id] = user.name;
-            return map;
-        }, {});
-
-        const items = foundItemsData.map(foundItem => {
-            const claim = claimsData.find(c => c.item_id === foundItem.id);
-            if (claim) {
-                // Ensure image_url has leading slash
-                const imageUrl = foundItem.image_url && !foundItem.image_url.startsWith('/') 
-                    ? '/' + foundItem.image_url 
-                    : foundItem.image_url;
-
-                return {
-                    ...foundItem,
-                    claim_id: claim.id,
-                    claim_status: claim.claim_status,
-                    proof_of_ownership: claim.proof_of_ownership,
-                    submission_date: claim.submission_date,
-                    user_name: usersMap[claim.user_id] || 'Unknown',
-                    image_url: imageUrl
-                };
-            }
-            return null;
-        }).filter(item => item !== null);
-
-        combinedItems.value = items;
-        claims.value = claimsData;
+        console.log('Processed claims:', claims.value);
     } catch (error) {
         console.error('Error fetching items:', error);
+        claims.value = [];
+    } finally {
+        loading.value = false; // Hide loading after fetch
     }
 };
 
@@ -227,38 +251,19 @@ const formatDate = (date) => {
     });
 };
 
-// Show proof image in modal
+const isModalOpen = ref(false);
+const currentProofImage = ref('');
+
 const viewProof = (proofUrl) => {
-    if (!proofUrl) {
-        console.error('No proof URL provided');
-        return;
-    }
-
-    const fullUrl = getImageUrl(proofUrl);
-    console.log('Opening image URL:', fullUrl);
-    window.open(window.location.origin + fullUrl, '_blank');
-};
-
-// Update the claim status (approve or reject)
-const updateClaimStatus = async (claimId, status) => {
-    try {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const response = await fetch(`/claims/${claimId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({ claim_status: status })
-        });
-        if (response.ok) {
-            handleStatusUpdate({ id: claimId, status });
-        } else {
-            console.error('Error updating claim status');
-        }
-    } catch (error) {
-        console.error('Error updating claim status:', error);
-    }
+    if (!proofUrl) return;
+    
+    // Add /storage/ prefix if not already present
+    const fullUrl = proofUrl.startsWith('/storage/') 
+        ? proofUrl 
+        : `/storage/${proofUrl}`;
+    
+    // Open the image in a new tab
+    window.open(fullUrl, '_blank');
 };
 
 onMounted(fetchItems);
@@ -319,7 +324,7 @@ onMounted(fetchItems);
 }
 
 .font-semibold {
-    font-weight: 600;
+
 }
 
 .font-medium {
@@ -354,11 +359,32 @@ onMounted(fetchItems);
     padding: 1.5rem;
 }
 
+.p-8 {
+    padding: 2rem;
+}
+
 .rounded-lg {
     border-radius: 0.5rem;
 }
 
 .shadow-lg {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.bg-gray-50 {
+    background-color: #f9fafb;
+}
+
+.hover\:shadow-md {
+    transition-property: box-shadow;
+    transition-duration: 0.3s;
+}
+
+.hover\:shadow-md:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 </style>

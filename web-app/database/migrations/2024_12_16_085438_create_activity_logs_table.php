@@ -14,19 +14,12 @@ class CreateActivityLogsTable extends Migration
     public function up()
     {
         Schema::create('activity_log', function (Blueprint $table) {
-            $table->id(); // Auto-increment primary key
-            $table->unsignedBigInteger('user_id')->nullable(); // Foreign key reference to users table
+            $table->id('log_id'); // Auto-increment primary key
+            $table->unsignedBigInteger('user_id')->nullable(); // Foreign key reference to users table, use "set null" for delete
             $table->string('action'); // Action description
-            $table->timestamp('action_time'); // Action timestamp
+            $table->timestamp('action_time')->useCurrent(); // Action timestamp (default to current time)
             $table->string('ip_address', 45)->nullable(); // IP address
             $table->text('user_agent')->nullable(); // User agent
-            $table->timestamps(); // Add created_at and updated_at
-            
-            // Add foreign key constraint
-            $table->foreign('user_id')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('set null');
         });
     }
     /**

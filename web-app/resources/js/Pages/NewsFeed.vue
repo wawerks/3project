@@ -289,9 +289,11 @@ export default {
     };
 
     // Submit a new comment
-    const submitComment = async ({ itemId, text, itemType }) => {
+    const submitComment = async (data) => {
       try {
-        if (!text?.trim()) return;
+        const { itemId, text, itemType } = data;
+        
+        if (!text.trim()) return;
 
         console.log('Submitting comment with data:', {
           item_id: itemId,
@@ -308,8 +310,6 @@ export default {
             'X-CSRF-TOKEN': csrfToken.value
           }
         });
-
-        console.log('Comment submitted successfully:', response.data);
 
         // Find the item and add the new comment
         const item = lostItems.value.find(item => item.id === itemId);
