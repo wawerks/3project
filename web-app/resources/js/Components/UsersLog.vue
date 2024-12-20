@@ -18,10 +18,11 @@
             <th class="text-left">User</th>
             <th class="text-left">Action</th>
             <th class="text-left">Time</th>
+            <th class="text-left">IP Address</th>
           </tr>
         </template>
 
-        <template v-slot:header.user.name>
+        <template v-slot:header.name>
           <div>
             <div class="text-subtitle-2 font-weight-bold">User</div>
             <div class="text-caption text-grey">Name of user</div>
@@ -42,11 +43,19 @@
           </div>
         </template>
 
+        <template v-slot:header.ip_address>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">IP Address</div>
+            <div class="text-caption text-grey">IP address of user</div>
+          </div>
+        </template>
+
         <template v-slot:item="{ item }">
           <tr>
-            <td>{{ item.user ? item.user.name : 'Unknown' }}</td>
+            <td>{{ item.name }}</td>
             <td>{{ item.action }}</td>
             <td>{{ formatDate(item.action_time) }}</td>
+            <td>{{ item.ip_address }}</td>
           </tr>
         </template>
 
@@ -84,7 +93,7 @@ export default {
       headers: [
         {
           text: 'User',
-          value: 'user.name',
+          value: 'name',
           width: '20%',
           align: 'start',
           sortable: true,
@@ -93,7 +102,7 @@ export default {
         {
           text: 'Action',
           value: 'action',
-          width: '40%',
+          width: '30%',
           align: 'start',
           sortable: true,
           filterable: true,
@@ -105,6 +114,14 @@ export default {
           align: 'start',
           sortable: true,
         },
+        {
+          text: 'IP Address',
+          value: 'ip_address',
+          width: '30%',
+          align: 'start',
+          sortable: true,
+          filterable: true,
+        },
       ],
       logs: [],
       loading: true,
@@ -115,9 +132,10 @@ export default {
       if (!this.search) return this.logs;
       const searchTerm = this.search.toLowerCase();
       return this.logs.filter(log =>
-        log.user.name.toLowerCase().includes(searchTerm) ||
+        log.name.toLowerCase().includes(searchTerm) ||
         log.action.toLowerCase().includes(searchTerm) ||
-        this.formatDate(log.action_time).toLowerCase().includes(searchTerm)
+        this.formatDate(log.action_time).toLowerCase().includes(searchTerm) ||
+        log.ip_address.toLowerCase().includes(searchTerm)
       );
     }
   },
@@ -129,13 +147,17 @@ export default {
       this.loading = true;
       axios.get('/admin/users-log')
         .then(response => {
-          console.log(response.data); // Log the full response to check its structure
-          this.logs = response.data.activityLog;
+          console.log('Response data:', response.data);
+          if (response.data && response.data.logs) {
+            this.logs = response.data.logs;
+          } else {
+            this.logs = [];
+          }
           this.loading = false;
-          this.logs.sort((a, b) => new Date(b.action_time) - new Date(a.action_time));
         })
         .catch(error => {
           console.error('Error fetching logs:', error);
+          this.logs = [];
           this.loading = false;
         });
     },

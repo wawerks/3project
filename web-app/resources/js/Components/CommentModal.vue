@@ -68,7 +68,9 @@
                 <div class="space-y-4">
                   <div v-for="comment in sortedComments" :key="comment.id" class="bg-gray-50 p-4 rounded-lg">
                     <div class="space-y-1">
-                      <div class="font-medium text-gray-900">{{ comment.userName }} commented:</div>
+                      <div class="font-medium text-gray-900">
+                        {{ comment.user?.name || comment.user_name || 'Anonymous' }} commented:
+                      </div>
                       <p class="text-gray-700">{{ comment.text }}</p>
                       <div class="text-xs text-gray-500">
                         {{ formatDate(comment.created_at) }}

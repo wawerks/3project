@@ -5,13 +5,12 @@
                 <!-- Logo and brand -->
                 <div class="flex items-center space-x-3">
                     <img src="/img/image2.png" alt="Logo" class="w-10 h-10">
-                    <Link href="/" class="text-xl font-bold text-teal-500">Lost Finder</Link>
+                    <Link href="/" class="text-xl font-bold text-teal-500">LostNoMore</Link>
                 </div>
 
                 <!-- Desktop Navigation -->
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#features" class="text-gray-600 hover:text-teal-500">About</a>
-                    <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
                     <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
 
                     

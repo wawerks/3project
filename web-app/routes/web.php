@@ -71,6 +71,15 @@ Route::middleware('auth')->group(function () {
     })->middleware('auth'); // Add auth middleware if needed
 });
 
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+    Route::get('/', [AdminController::class, 'index'])->name('admin.index');
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+    Route::get('/users-log', [AdminController::class, 'usersLog'])->name('admin.users-log');
+    Route::get('/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reported-items');
+});
+
 Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -85,7 +94,6 @@ Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::patch('/admin/claims/{claim}/status', [ClaimController::class, 'updateStatus'])->name('admin.claims.update-status');
 });
 
-
 // Lost Items routes
 Route::prefix('lost-items')->group(function () {
     Route::get('/', [lostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
@@ -95,7 +103,6 @@ Route::prefix('lost-items')->group(function () {
     Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
     Route::get('/user/{userId}', [LostItemController::class, 'getLostItemsByUser']);
 });
-
 
 Route::prefix('comments')->group(function () {
     Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
@@ -115,6 +122,27 @@ Route::prefix('found-items')->group(function () {
 
 Route::get('/session', [SessionController::class, 'show']); // To view session details
 Route::delete('/session', [SessionController::class, 'destroy']); // To destroy session
+
+// Comment Routes
+Route::post('/api/comments', [CommentController::class, 'store']);
+Route::get('/api/comments/{id}', [CommentController::class, 'show']);
+
+require __DIR__.'/auth.php';
+
+
+// Comment Routes
+Route::post('/api/comments', [CommentController::class, 'store']);
+Route::get('/api/comments/{id}', [CommentController::class, 'show']);
+
+require __DIR__.'/auth.php';
+
+
+// Comment Routes
+Route::post('/api/comments', [CommentController::class, 'store']);
+Route::get('/api/comments/{id}', [CommentController::class, 'show']);
+
+require __DIR__.'/auth.php';
+
 
 // Comment Routes
 Route::post('/api/comments', [CommentController::class, 'store']);

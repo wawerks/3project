@@ -219,14 +219,17 @@ const fetchItems = async () => {
     loading.value = true; // Show loading while fetching
     try {
         const response = await fetch('/claim-items');
-        const claimsData = await response.json();
+        const data = await response.json();
         
         // Process and store the claims
-        claims.value = claimsData.map(claim => ({
+        claims.value = data.claims.map(claim => ({
             ...claim,
             image_url: claim.image_url && !claim.image_url.startsWith('/') 
                 ? '/' + claim.image_url 
-                : claim.image_url
+                : claim.image_url,
+            proof_of_ownership: claim.proof_of_ownership && !claim.proof_of_ownership.startsWith('/')
+                ? '/' + claim.proof_of_ownership
+                : claim.proof_of_ownership
         }));
 
         console.log('Processed claims:', claims.value);

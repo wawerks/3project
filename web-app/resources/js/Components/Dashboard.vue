@@ -37,7 +37,7 @@
       <v-col cols="12" sm="6">
         <v-card outlined>
           <v-card-title>Item Statistics</v-card-title>
-          <pie-chart ref="pieChart" :data="pieChartData" />
+          <div ref="pieChart" class="chart-container"></div>
         </v-card>
       </v-col>
 
@@ -45,7 +45,7 @@
       <v-col cols="12" sm="6">
         <v-card outlined>
           <v-card-title>Item Overview</v-card-title>
-          <bar-chart ref="barChart" :data="barChartData" />
+          <div ref="barChart" class="chart-container"></div>
         </v-card>
       </v-col>
     </v-row>
@@ -53,17 +53,10 @@
 </template>
 
 <script>
-import { Pie, Bar } from 'vue-chartjs';
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
-
-ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
+import * as d3 from 'd3';
 
 export default {
   name: 'Dashboard',
-  components: {
-    PieChart: Pie,
-    BarChart: Bar
-  },
   data() {
     return {
       stats: {
@@ -72,35 +65,12 @@ export default {
         foundItems: 0,
         claims: 0,
       },
-      pieChartData: {
-        labels: ['Lost Items', 'Found Items', 'Claims'],
-        datasets: [{
-          label: 'Item Statistics',
-          data: [0, 0, 0],
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-          hoverOffset: 4
-        }]
-      },
-      barChartData: {
-        labels: ['Lost Items', 'Found Items', 'Claims'],
-        datasets: [{
-          label: 'Item Overview',
-          data: [0, 0, 0],
-          backgroundColor: '#42A5F5',
-          borderColor: '#1E88E5',
-          borderWidth: 1
-        }]
-      }
+      pieChartData: [0, 0, 0], // Data for the pie chart
+      barChartData: [0, 0, 0, 0], // Data for the bar chart
     };
   },
   mounted() {
     this.fetchDashboardData();
-  },
-  watch: {
-    stats(newStats) {
-      this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-      this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-    }
   },
   methods: {
     async fetchDashboardData() {
@@ -109,9 +79,10 @@ export default {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
+
         const data = await response.json();
 
-        // Update the stats
+        // Update stats
         this.stats = {
           totalUsers: data.totalUsers,
           lostItems: data.lostItems,
@@ -119,16 +90,151 @@ export default {
           claims: data.claims,
         };
 
-        // Update pie and bar chart data
-        this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
-        this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
+        // Update chart data
+        this.pieChartData = [data.lostItems, data.foundItems, data.claims];
+        this.barChartData = [data.totalUsers, data.lostItems, data.foundItems, data.claims];
+
+        // Render the charts with D3.js
+        this.renderPieChart();
+        this.renderBarChart();
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
-    }
-  }
-}
+    },
+
+    renderPieChart() {
+      const data = this.pieChartData;
+      const width = 300;
+      const height = 300;
+      const radius = Math.min(width, height) / 2;
+
+      const svg = d3.select(this.$refs.pieChart)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .append('g')
+        .attr('transform', `translate(${width / 2}, ${height / 2})`);
+
+      const color = d3.scaleOrdinal(['#FF6384', '#36A2EB', '#FFCE56']);
+      const categories = ['Lost Items', 'Found Items', 'Claims'];
+
+      const pie = d3.pie();
+      const arc = d3.arc().outerRadius(radius).innerRadius(0);
+
+      // Tooltip
+      const tooltip = d3.select(this.$refs.pieChart)
+        .append('div')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', '#fff')
+        .style('border', '1px solid #ccc')
+        .style('padding', '5px')
+        .style('border-radius', '4px')
+        .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.1)');
+
+      const pieData = pie(data);
+
+      const arcs = svg.selectAll('.arc')
+        .data(pieData)
+        .enter()
+        .append('g')
+        .attr('class', 'arc');
+
+      // Append paths for the slices
+      arcs.append('path')
+        .attr('d', arc)
+        .style('fill', (d, i) => color(i))
+        .on('mouseover', (event, d) => {
+          tooltip.style('visibility', 'visible').text(`${categories[d.index]}: ${d.data}`);
+        })
+        .on('mousemove', (event) => {
+          tooltip.style('top', `${event.pageY - 10}px`).style('left', `${event.pageX + 10}px`);
+        })
+        .on('mouseout', () => {
+          tooltip.style('visibility', 'hidden');
+        });
+
+      // Append labels for the slices
+      arcs.append('text')
+        .attr('transform', (d) => {
+          const [x, y] = arc.centroid(d); // Get the center of each slice
+          return `translate(${x}, ${y})`;  // Position the label at the center
+        })
+        .attr('text-anchor', 'middle')
+        .attr('dy', '.35em') // Adjust the vertical alignment
+        .style('font-size', '14px')
+        .style('fill', '#fff')
+        .text((d, i) => `${categories[i]}: ${d.data}`); // Display category and value
+    },
+
+    renderBarChart() {
+      const data = this.barChartData;
+      const width = 500;
+      const height = 300;
+      const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+      const chartWidth = width - margin.left - margin.right;
+      const chartHeight = height - margin.top - margin.bottom;
+
+      const svg = d3.select(this.$refs.barChart)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleBand()
+        .domain(data.map((_, i) => i))
+        .range([0, chartWidth])
+        .padding(0.1);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(data)])
+        .nice()
+        .range([chartHeight, 0]);
+
+      const tooltip = d3.select(this.$refs.barChart)
+        .append('div')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', '#fff')
+        .style('border', '1px solid #ccc')
+        .style('padding', '5px')
+        .style('border-radius', '4px')
+        .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.1)');
+
+      svg.selectAll('.bar')
+        .data(data)
+        .enter()
+        .append('rect')
+        .attr('class', 'bar')
+        .attr('x', (d, i) => x(i))
+        .attr('y', d => y(d))
+        .attr('width', x.bandwidth())
+        .attr('height', d => chartHeight - y(d))
+        .style('fill', '#4CAF50')
+        .on('mouseover', (event, d) => {
+          tooltip.style('visibility', 'visible').text(`Value: ${d}`);
+        })
+        .on('mousemove', (event) => {
+          tooltip.style('top', `${event.pageY - 10}px`).style('left', `${event.pageX + 10}px`);
+        })
+        .on('mouseout', () => {
+          tooltip.style('visibility', 'hidden');
+        });
+
+      svg.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', `translate(0,${chartHeight})`)
+        .call(d3.axisBottom(x).tickFormat(i => ['Total Users', 'Lost Items', 'Found Items', 'Claims'][i]));
+
+      svg.append('g')
+        .attr('class', 'y axis')
+        .call(d3.axisLeft(y));
+    },
+  },
+};
 </script>
+
 
 <style scoped>
 .card-overview {
@@ -146,29 +252,8 @@ export default {
   color: #181C14;
 }
 
-.user-card {
-  padding: 20px;
-  border-radius: 8px;
-  background-color: #FFFFFF;
-}
-
-.activity-card {
-  background-color: #FFFFFF;
-  border-radius: 8px;
-}
-
-.teal-bg {
-  background: var(--v-teal) !important;
-  color: white !important;
-}
-
-.coral-bg {
-  background: var(--v-coral) !important;
-  color: white !important;
-}
-
-.olive-bg {
-  background: var(--v-accent-base) !important;
-  color: white !important;
+.chart-container {
+  width: 100%;
+  height: 300px;
 }
 </style>

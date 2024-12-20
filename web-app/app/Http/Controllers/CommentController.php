@@ -16,144 +16,76 @@ class CommentController extends Controller
     {
         try {
             if (!auth()->check()) {
-                Log::error('Unauthorized comment attempt - user not authenticated');
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-    
-            Log::info('Comment request data:', $request->all());
-            Log::info('Authenticated user:', ['user_id' => auth()->id(), 'user' => auth()->user()]);
-    
+
             // Validate the request
             $validatedData = $request->validate([
                 'item_type' => 'required|string|in:lost,found',
-                'item_id' => ['required', 'integer', function ($attribute, $value, $fail) use ($request) {
-                    $model = $request->item_type === 'lost' ? LostItem::class : FoundItem::class;
-                    if (!$model::find($value)) {
-                        $fail('The selected item does not exist.');
-                    }
-                }],
+                'item_id' => 'required|integer',
                 'text' => 'required|string|max:500',
             ]);
-    
-            Log::info('Request validated successfully', ['data' => $validatedData]);
-    
-            // Determine the model based on item_type
-            $modelClass = $request->item_type === 'lost' ? LostItem::class : FoundItem::class;
-            Log::info('Using model class:', ['class' => $modelClass]);
-    
+
+            // Map item_type to full model class name
+            $modelClass = $validatedData['item_type'] === 'lost' 
+                ? 'App\\Models\\LostItem' 
+                : 'App\\Models\\FoundItem';
+
             // Find the item
-            $item = $modelClass::findOrFail($request->item_id);
-            Log::info('Found item:', [
-                'item' => $item->toArray(),
-                'item_user_id' => $item->user_id,
-                'current_user_id' => auth()->id()
-            ]);
-    
-            DB::beginTransaction();
-            try {
-                // Create the comment using create method with fillable fields
-                $comment = Comment::create([
-                    'user_id' => auth()->id(),
-                    'text' => $request->text,
-                    'commentable_id' => $item->id,
-                    'commentable_type' => get_class($item),
-                    'item_type' => $request->item_type,
-                    'item_id' => $request->item_id
+            $item = $modelClass::findOrFail($validatedData['item_id']);
+
+            // Create the comment
+            $comment = new Comment();
+            $comment->user_id = auth()->id();
+            $comment->commentable_id = $validatedData['item_id'];
+            $comment->commentable_type = $modelClass;
+            $comment->text = $validatedData['text'];
+            $comment->save();
+
+            // Load the comment with user relationship
+            $comment->load('user');
+
+            // Create notification for the item owner if it's not their own comment
+            if ($item->user_id !== auth()->id()) {
+                $notificationData = [
+                    'title' => 'New Comment',
+                    'message' => auth()->user()->name . ' commented on your ' . $validatedData['item_type'] . ' item "' . $item->item_name . '"',
+                    'item_id' => $item->id,
+                    'item_type' => $validatedData['item_type'],
+                    'comment_id' => $comment->id,
+                    'item_name' => $item->item_name,
+                    'commenter_name' => auth()->user()->name,
+                    'comment_text' => $validatedData['text']
+                ];
+
+                Notification::create([
+                    'user_id' => $item->user_id,
+                    'type' => 'comment',
+                    'data' => $notificationData,
+                    'read_at' => null
                 ]);
-                
-                Log::info('Comment created successfully:', ['comment' => $comment->toArray()]);
-
-                // Load the user relationship for the response
-                $comment->load('user');
-                
-                // Create notification for the item owner
-                if ($item->user_id !== auth()->id()) {
-                    try {
-                        Log::info('Attempting to create notification:', [
-                            'item_user_id' => $item->user_id,
-                            'current_user_id' => auth()->id(),
-                            'item_type' => $request->item_type,
-                            'item_name' => $item->item_name,
-                            'item_class' => get_class($item)
-                        ]);
-
-                        $notificationData = [
-                            'title' => auth()->user()->name . ' commented on your item',
-                            'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item',
-                            'item_id' => $item->id,
-                            'item_type' => $request->item_type,
-                            'comment_id' => $comment->id,
-                            'item_name' => $item->item_name,
-                            'commenter_name' => auth()->user()->name
-                        ];
-
-                        Log::info('Creating notification with data:', [
-                            'user_id' => $item->user_id,
-                            'type' => 'comment',
-                            'data' => $notificationData
-                        ]);
-
-                        $notification = Notification::create([
-                            'user_id' => $item->user_id,
-                            'type' => 'comment',
-                            'data' => $notificationData
-                        ]);
-
-                        Log::info('Notification created successfully:', $notification->toArray());
-                    } catch (\Exception $e) {
-                        Log::error('Failed to create notification:', [
-                            'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString(),
-                            'item_user_id' => $item->user_id ?? 'unknown',
-                            'current_user_id' => auth()->id() ?? 'unknown',
-                            'item_type' => $request->item_type ?? 'unknown'
-                        ]);
-                    }
-                } else {
-                    Log::info('Skipping notification - user commenting on own item', [
-                        'item_user_id' => $item->user_id,
-                        'current_user_id' => auth()->id()
-                    ]);
-                }
-
-                DB::commit();
-
-                return response()->json([
-                    'success' => true,
-                    'comment' => [
-                        'id' => $comment->id,
-                        'text' => $comment->text,
-                        'user' => [
-                            'id' => $comment->user->id,
-                            'name' => $comment->user->name
-                        ],
-                        'created_at' => $comment->created_at,
-                        'updated_at' => $comment->updated_at,
-                        'commentable_id' => $comment->commentable_id,
-                        'commentable_type' => $comment->commentable_type,
-                        'item_type' => $comment->item_type,
-                        'item_id' => $comment->item_id
-                    ]
-                ]);
-    
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error('Error creating comment:', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                return response()->json([
-                    'error' => 'Failed to add comment',
-                    'message' => $e->getMessage()
-                ], 500);
             }
-        } catch (\Exception $e) {
-            Log::error('Error in comment submission:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+
             return response()->json([
-                'error' => 'Failed to add comment',
+                'message' => 'Comment created successfully',
+                'comment' => [
+                    'id' => $comment->id,
+                    'text' => $comment->text,
+                    'commentable_id' => $comment->commentable_id,
+                    'commentable_type' => $comment->commentable_type,
+                    'created_at' => $comment->created_at,
+                    'user' => [
+                        'id' => $comment->user->id,
+                        'name' => $comment->user->name
+                    ],
+                    'user_name' => $comment->user->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error creating comment: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to create comment',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -211,10 +143,10 @@ class CommentController extends Controller
     public function index($item_type, $item_id)
     {
         try {
-            Log::info('Fetching comments for item:', [
-                'item_type' => $item_type,
-                'item_id' => $item_id
-            ]);
+            // Log::info('Fetching comments for item:', [
+            //     'item_type' => $item_type,
+            //     'item_id' => $item_id
+            // ]);
 
             // Determine the model based on item_type
             $modelClass = $item_type === 'lost' ? LostItem::class : FoundItem::class;

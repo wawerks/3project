@@ -9,7 +9,9 @@ class ActivityLog extends Model
 {
     use HasFactory;
 
-    protected $table = 'activity_log'; // Specify the table name if it's not pluralized
+    protected $table = 'activity_log';
+    protected $primaryKey = 'id';
+    public $timestamps = false; // Since we're using action_time instead
 
     protected $fillable = [
         'user_id',
@@ -18,11 +20,15 @@ class ActivityLog extends Model
         'ip_address',
         'user_agent',
     ];
-    
+
+    protected $casts = [
+        'action_time' => 'datetime',
+    ];
+
+    protected $with = ['user']; // Always load the user relationship
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    public $timestamps = true; // This will allow the created_at and updated_at columns to be managed by Eloquent
 }

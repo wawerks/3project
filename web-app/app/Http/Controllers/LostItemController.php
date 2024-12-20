@@ -143,22 +143,33 @@ class LostItemController extends Controller
     public function destroy($id)
     {
         try {
-            $lostItem = LostItem::findOrFail($id);
-            
-            // Delete the image file if it exists
-            if ($lostItem->image_url) {
-                $filePath = public_path($lostItem->image_url);
-                if (file_exists($filePath)) {
-                    unlink($filePath); 
+            // Fetch the lost item details using the PostgreSQL function
+            $lostItemDetails = DB::select('SELECT * FROM get_lost_items_by_user(?)', [$id]);
+    
+            if ($lostItemDetails) {
+                $lostItem = LostItem::findOrFail($id);
+                
+                // Delete the image file if it exists
+                if ($lostItem->image_url) {
+                    $filePath = public_path($lostItem->image_url);
+                    if (file_exists($filePath)) {
+                        unlink($filePath); 
+                    }
                 }
+    
+                $lostItem->delete();
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Item deleted successfully',
+                    'lost_item_details' => $lostItemDetails
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found'
+                ], 404);
             }
-        
-            $lostItem->delete();
-        
-            return response()->json([
-                'success' => true,
-                'message' => 'Item deleted successfully'
-            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

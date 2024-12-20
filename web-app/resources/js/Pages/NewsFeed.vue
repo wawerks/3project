@@ -291,51 +291,44 @@ export default {
     // Submit a new comment
     const submitComment = async (data) => {
       try {
-        const { itemId, text, itemType } = data;
-        
-        if (!text.trim()) return;
-
-        console.log('Submitting comment with data:', {
-          item_id: itemId,
-          text: text.trim(),
-          item_type: itemType
-        });
+        if (!data || !data.text || !data.itemId || !data.itemType) {
+          console.error('Invalid comment data:', data);
+          return;
+        }
 
         const response = await axios.post("/comments", {
-          item_id: itemId,
-          text: text.trim(),
-          item_type: itemType
-        }, {
-          headers: {
-            'X-CSRF-TOKEN': csrfToken.value
-          }
+          item_id: data.itemId,
+          text: data.text.trim(),
+          item_type: data.itemType.toLowerCase()
         });
 
-        // Find the item and add the new comment
-        const item = lostItems.value.find(item => item.id === itemId);
-        if (item) {
-          if (!item.comments) {
-            item.comments = [];
-          }
+        if (response.data && response.data.comment) {
+          // Find the item in either lostItems or foundItems
+          const items = data.itemType.toLowerCase() === 'lost' ? lostItems.value : foundItems.value;
+          const item = items.find(i => i.id === data.itemId);
           
-          // Add the new comment with user data from the response
-          if (response.data.comment) {
+          if (item) {
+            if (!item.comments) {
+              item.comments = [];
+            }
+            
+            // Add the new comment with user information
             const newComment = {
               ...response.data.comment,
-              userName: response.data.comment.user.name
+              user_name: response.data.comment.user.name,
+              user: response.data.comment.user
             };
             item.comments.unshift(newComment);
-            
-            // Refresh comments to ensure consistency
-            await fetchComments();
           }
         }
 
         return response.data;
       } catch (error) {
         console.error("Error submitting comment:", error);
-        if (error.response && error.response.data) {
-          console.error("Server error details:", error.response.data);
+        if (error.response?.data?.message) {
+          alert(error.response.data.message);
+        } else {
+          alert("Failed to submit comment. Please try again.");
         }
         throw error;
       }

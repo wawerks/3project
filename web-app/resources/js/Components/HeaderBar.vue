@@ -4,7 +4,7 @@
             <div class="flex justify-between items-center">
               <div class="flex items-center space-x-3">
                     <img src="/img/image2.png" alt="Logo" class="w-10 h-10">
-                    <Link href="/" class="text-xl font-bold text-teal-500">Lost Finder</Link>
+                    <Link href="/" class="text-xl font-bold text-teal-500">LostNoMore</Link>
                 </div>
 
                 <div class="flex items-center space-x-6">

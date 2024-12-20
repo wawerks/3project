@@ -9,8 +9,8 @@ use App\Models\LostItem;
 use App\Models\FoundItem;
 use App\Models\Claim;
 use App\Models\ActivityLog;
-use Illuminate\Support\Facades\Auth; // Import for authentication
-use Illuminate\Support\Facades\Hash; // Import for password hashing
+use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Hash; 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -46,17 +46,18 @@ class AdminController extends Controller
         $users = User::all();
 
         return response()->json([
-            'users' => $users,
+            'users' => $users
         ]);
     }
 
     public function usersLog()
     {
-        $activityLog = ActivityLog::with('user:id,name')->get();
+        $activityLog = DB::table('User_Activity_Report')
+            ->select('name', 'action', 'action_time', 'ip_address', 'id')
+            ->orderBy('action_time', 'DESC')
+            ->get();
 
-        return response()->json([
-            'activityLog' => $activityLog,
-        ]);
+        return response()->json(['logs' => $activityLog]);
     }
 
     public function reportedItems()
@@ -66,7 +67,7 @@ class AdminController extends Controller
 
         return response()->json([
             'lostItems' => $lostItems,
-            'foundItems' => $foundItems,
+            'foundItems' => $foundItems
         ]);
     }
 
@@ -76,7 +77,7 @@ class AdminController extends Controller
 
         return response()->json([
             'id' => $user->id,
-            'last_login_at' => $user->last_login_at,
+            'last_login_at' => $user->last_login_at
         ]);
     }
 
@@ -87,14 +88,14 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|string|in:admin,user',
+            'role' => 'required|string|in:admin,user'
         ]);
     
         try {
             // Check if a user is logged in
             if (!Auth::check()) {
                 return response()->json([
-                    'error' => 'Unauthorized. You must be logged in to create a user.',
+                    'error' => 'Unauthorized. You must be logged in to create a user.'
                 ], 401);
             }
     
@@ -103,20 +104,20 @@ class AdminController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'role' => $validated['role'],
+                'role' => $validated['role']
             ]);
     
-            return response()->json([
+        return response()->json([
                 'message' => 'User created successfully',
-                'user' => $user,
+                'user' => $user
             ], 201);
         } catch (\Exception $e) {
             Log::error('User Creation Failed: ' . $e->getMessage());
     
-            return response()->json([
-                'error' => 'Failed to create user. Please try again.',
+                return response()->json([
+                'error' => 'Failed to create user. Please try again.'
             ], 500);
-        }
+            }
     }
     
 }

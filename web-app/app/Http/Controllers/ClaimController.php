@@ -149,32 +149,54 @@ class ClaimController extends Controller
     /**
      * Show all claims with related data.
      */
-    public function showAll()
-    {
-        $claims = Claim::with(['user', 'foundItem'])->get()->map(function ($claim) {
-            $proofUrl = $claim->proof_of_ownership;
-            if ($proofUrl && !str_starts_with($proofUrl, '/storage/')) {
-                $proofUrl = '/storage/' . $proofUrl;
-            }
 
-            return [
-                'claim_id' => $claim->claim_id,
-                'item_id' => $claim->item_id,
-                'user_id' => $claim->user_id,
-                'claim_status' => $claim->claim_status,
-                'submission_date' => $claim->submission_date,
-                'proof_of_ownership' => $proofUrl,
-                'user_name' => $claim->user->name,
-                'item_name' => $claim->foundItem->item_name,
-                'description' => $claim->foundItem->description,
-                'category' => $claim->foundItem->category,
-                'found_date' => $claim->foundItem->found_date,
-                'image_url' => $claim->foundItem->image_url,
-            ];
-        });
+     public function showAll()
+     {
+        $claims = DB::table('claims')
+            ->join('found_items', 'claims.item_id', '=', 'found_items.id')
+            ->join('users', 'claims.user_id', '=', 'users.id')
+            ->select(
+                'claims.claim_id',
+                'claims.claim_status',
+                'claims.submission_date',
+                'claims.proof_of_ownership',
+                'found_items.item_name',
+                'found_items.description',
+                'found_items.image_url',
+                'users.name as user_name'
+            )
+            ->orderBy('claims.submission_date', 'DESC')
+            ->get();
 
-        return response()->json($claims);
-    }
+        return response()->json(['claims' => $claims]);
+     }
+
+    // public function showAll()
+    // {
+    //     $claims = Claim::with(['user', 'foundItem'])->get()->map(function ($claim) {
+    //         $proofUrl = $claim->proof_of_ownership;
+    //         if ($proofUrl && !str_starts_with($proofUrl, '/storage/')) {
+    //             $proofUrl = '/storage/' . $proofUrl;
+    //         }
+
+    //         return [
+    //             'claim_id' => $claim->claim_id,
+    //             'item_id' => $claim->item_id,
+    //             'user_id' => $claim->user_id,
+    //             'claim_status' => $claim->claim_status,
+    //             'submission_date' => $claim->submission_date,
+    //             'proof_of_ownership' => $proofUrl,
+    //             'user_name' => $claim->user->name,
+    //             'item_name' => $claim->foundItem->item_name,
+    //             'description' => $claim->foundItem->description,
+    //             'category' => $claim->foundItem->category,
+    //             'found_date' => $claim->foundItem->found_date,
+    //             'image_url' => $claim->foundItem->image_url,
+    //         ];
+    //     });
+
+    //     return response()->json($claims);
+    // }
 
    /**
      * Index claims with item details.

@@ -18,6 +18,7 @@
           <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
             <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
             <p class="post-date">{{ post.lost_date || post.found_date }}</p>
+            <p class="post-info"><strong>Item name:</strong> {{ post.item_name }}</p>
             <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
             <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
             <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
@@ -318,16 +319,17 @@ export default {
       }
     },
     filterPosts() {
-      const query = this.searchQuery.toLowerCase();
-      this.filteredPosts = query
-        ? this.posts.filter(
-          (post) =>
-            post.item_name.toLowerCase().includes(query) ||
-            post.description.toLowerCase().includes(query) ||
-            post.category.toLowerCase().includes(query)
-        )
-        : [...this.posts];
-    },
+  const query = this.searchQuery.toLowerCase();
+  this.filteredPosts = query
+    ? this.posts.filter(
+        (post) =>
+          post.category.toLowerCase().includes(query) ||
+          post.item_name.toLowerCase().includes(query) ||
+          post.description.toLowerCase().includes(query)
+      )
+    : [...this.posts];
+},
+
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
@@ -735,13 +737,13 @@ export default {
 }
 
 .edit-modal__submit-btn {
-  background-color: #4CAF50;
+  background-color: #008080;
   color: white;
   border: none;
 }
 
 .edit-modal__submit-btn:hover {
-  background-color: #45a049;
+  background-color: #44b0b0;
 }
 
 .edit-modal__delete-btn {
@@ -816,7 +818,7 @@ export default {
 
 .form-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: 20px;
 }
 
@@ -1497,7 +1499,7 @@ export default {
 }
 
 .post-modal__edit-btn:hover {
-  background: #45a049;
+  background: #6bc5c5;
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
 }
 

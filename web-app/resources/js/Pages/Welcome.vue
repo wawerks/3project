@@ -25,7 +25,7 @@
                     <p class="text-xl mb-8 max-w-2xl mx-auto">Find what you've lost or help others recover their
                         belongings.</p>
                     <button @click="redirectToNewsfeed"
-                        class="bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                        class="getStarted bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold transition-colors">
                         Get Started
                     </button>
                 </div>
@@ -84,7 +84,7 @@
         <!-- Footer -->
         <footer class="bg-gray-800 text-white py-8">
             <div class="container mx-auto px-4 text-center">
-                <p>&copy; 2024 Lost Finder. All rights reserved.</p>
+                <p>&copy; 2024 LostNoMore. All rights reserved.</p>
             </div>
         </footer>
 
@@ -134,9 +134,9 @@ onMounted(() => {
 
 const redirectToNewsfeed = () => {
     if (isLoggedIn.value) {
-        window.location.href = '/newsfeed';  
+        window.location.href = '/newsfeed';
     } else {
-        showLoginModal.value = true; 
+        showLoginModal.value = true;
     }
 };
 
@@ -152,6 +152,12 @@ const closeLoginModal = () => {
 
 <style>
 @import '@fortawesome/fontawesome-free/css/all.css';
+
+.getStarted:hover {
+    background: #e30000;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+
+}
 
 .container {
     max-width: 1200px;
